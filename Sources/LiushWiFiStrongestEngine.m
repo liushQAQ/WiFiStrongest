@@ -6,6 +6,11 @@
 #import "LiushWiFiStrongestVersion.h"
 #import <objc/message.h>
 
+// C 回调在本类实现之前就要引用自检方法，这里前置声明。
+@interface LiushWiFiStrongestEngine (LiushSelfCheck)
+- (void)liush_wifistrongest_selfCheck;
+@end
+
 static const NSTimeInterval LiushWiFiStrongestTickInterval = 5.0;
 static const NSTimeInterval LiushWiFiStrongestPostSwitchQuiet = 20.0;
 
