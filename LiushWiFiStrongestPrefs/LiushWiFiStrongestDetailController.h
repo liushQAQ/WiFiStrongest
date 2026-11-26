@@ -8,5 +8,5 @@
 //
 // 必须继承 PSViewController：Preferences 打开二级页时会发送 setSpecifier: / setRootController: /
 // setParentController: / initForContentSize:，纯 UITableViewController 没有这些方法，点进去必崩。
-@interface LiushWiFiStrongestDetailController : PSViewController
+@interface LiushWiFiStrongestDetailController : PSViewController <UITableViewDataSource, UITableViewDelegate>
 @end
