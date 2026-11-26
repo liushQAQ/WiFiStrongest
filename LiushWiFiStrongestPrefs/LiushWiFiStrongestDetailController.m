@@ -6,6 +6,7 @@
 // GoodWiFi 那套能力的数据来源是 SpringBoard 侧的扫描快照（JSON），
 // Preferences 进程既没有 wlan entitlement 也没有扫描权限，所以这里只读文件、不发扫描。
 @interface LiushWiFiStrongestDetailController ()
+@property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) NSDictionary *snapshot;
 @property (nonatomic, strong) NSArray<NSDictionary *> *networks;
 @property (nonatomic, assign) BOOL refreshing;
@@ -13,23 +14,15 @@
 
 @implementation LiushWiFiStrongestDetailController
 
-- (instancetype)init {
-    self = [super initWithStyle:UITableViewStyleInsetGrouped];
-    return self;
-}
-
-// PSListController 在部分系统版本上会按 PSViewController 的约定调用这两个方法，
-// 这里给出无害实现，避免因为“unrecognized selector”把设置 App 打崩。
-- (instancetype)initWithSpecifier:(id)specifier {
-    return [self initWithStyle:UITableViewStyleInsetGrouped];
-}
-
-- (void)setSpecifier:(id)specifier {
-    (void)specifier;
-}
-
-- (id)specifier {
-    return nil;
+// 基类是 PSViewController（Preferences 要求），没有现成的 tableView，
+// 所以把表格直接当成自己的 view，原有用 self.tableView 的逻辑一行不用改。
+- (void)loadView {
+    UITableView *table = [[UITableView alloc] initWithFrame:CGRectZero
+                                                     style:UITableViewStyleInsetGrouped];
+    table.dataSource = self;
+    table.delegate = self;
+    self.view = table;
+    self.tableView = table;
 }
 
 - (void)viewDidLoad {

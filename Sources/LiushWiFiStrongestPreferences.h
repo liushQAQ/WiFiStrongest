@@ -6,6 +6,7 @@
 
 static NSString * const LiushWiFiStrongestPreferencesDomain = @"com.liush.wifistrongest";
 static NSString * const LiushWiFiStrongestPreferencesChanged = @"com.liush.wifistrongest.preferences-changed";
+static NSString * const LiushWiFiStrongestSelfCheckNotification = @"com.liush.wifistrongest.selfcheck";
 
 static inline NSDictionary *liush_wifistrongest_readPreferences(void) {
     NSString *path = liush_wifistrongest_preferencesPath();

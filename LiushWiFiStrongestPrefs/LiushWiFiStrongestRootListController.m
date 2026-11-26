@@ -46,6 +46,7 @@
         [items addObject:detailLink];
         [items addObject:[PSSpecifier preferenceSpecifierNamed:@"诊断" target:self
                      set:nil get:nil detail:nil cell:PSGroupCell edit:nil]];
+        [self liush_wifistrongest_addButton:@"运行自检（写日志）" action:@selector(liush_wifistrongest_selfCheck:) to:items];
         [self liush_wifistrongest_addButton:@"立即扫描一次" action:@selector(liush_wifistrongest_forceScanOnce:) to:items];
         [self liush_wifistrongest_addButton:@"查看运行日志" action:@selector(liush_wifistrongest_showLog:) to:items];
         [self liush_wifistrongest_addButton:@"复制日志（发 AI 排障）" action:@selector(liush_wifistrongest_copyLog:) to:items];
@@ -108,6 +109,16 @@
         [self presentViewController:alert animated:YES completion:nil];
         [self reloadSpecifiers];
     }
+}
+
+- (void)liush_wifistrongest_selfCheck:(id)sender {
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
+        (__bridge CFStringRef)LiushWiFiStrongestSelfCheckNotification, NULL, NULL, true);
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"已写入自检"
+        message:@"自检结果已写进日志，点「复制日志」发我即可。"
+        preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)liush_wifistrongest_forceScanOnce:(id)sender {

@@ -5,14 +5,21 @@
 // 白名单存在 preferences 的 whitelist 键里，格式是英文逗号分隔的字符串（引擎按逗号/分号/换行切）。
 // 这一页只负责增删，最终仍然写回同一个键，保证和引擎读取逻辑一致。
 @interface LiushWiFiStrongestWhitelistController ()
+@property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) NSMutableArray<NSString *> *entries;
 @property (nonatomic, strong) NSArray<NSDictionary *> *scanned;
 @end
 
 @implementation LiushWiFiStrongestWhitelistController
 
-- (instancetype)init {
-    return [super initWithStyle:UITableViewStyleInsetGrouped];
+// 同样：基类是 PSViewController，表格自己搭。
+- (void)loadView {
+    UITableView *table = [[UITableView alloc] initWithFrame:CGRectZero
+                                                     style:UITableViewStyleInsetGrouped];
+    table.dataSource = self;
+    table.delegate = self;
+    self.view = table;
+    self.tableView = table;
 }
 
 - (void)viewDidLoad {

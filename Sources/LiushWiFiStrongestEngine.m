@@ -2,7 +2,8 @@
 #import "LiushWiFiStrongestConfig.h"
 #import "LiushWiFiStrongestLog.h"
 #import "LiushWiFiStrongestMobileWiFi.h"
-#import "LiushWiFiStrongestPaths.h"
+#import "LiushWiFiStrongestPreferences.h"
+#import "LiushWiFiStrongestVersion.h"
 #import <objc/message.h>
 
 static const NSTimeInterval LiushWiFiStrongestTickInterval = 5.0;
@@ -37,6 +38,15 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
     });
 }
 
+static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center, void *observer,
+                                              CFStringRef name, const void *object,
+                                              CFDictionaryRef info) {
+    LiushWiFiStrongestEngine *engine = (__bridge LiushWiFiStrongestEngine *)observer;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [engine liush_wifistrongest_selfCheck];
+    });
+}
+
 @interface LiushWiFiStrongestEngine ()
 @property (nonatomic, strong) dispatch_queue_t queue;
 @property (nonatomic, strong) NSTimer *timer;
@@ -45,7 +55,11 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
 @property (nonatomic, strong) NSDate *lastSwitch;
 @property (nonatomic, assign) BOOL busy;
 @property (nonatomic, assign) BOOL running;
-@property (nonatomic, assign) BOOL warnedNoScan;
+@property (nonatomic, assign) BOOL pendingForced;
+@property (nonatomic, assign) NSInteger tickCount;
+@property (nonatomic, assign) NSInteger lastScanCount;
+// 上一次写进日志的「为什么没动作」，用于去重，避免每 5 秒刷一行。
+@property (nonatomic, copy) NSString *lastReason;
 @end
 
 @implementation LiushWiFiStrongestEngine
@@ -82,7 +96,69 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
                                                 userInfo:nil
                                                  repeats:YES];
     self.timer.tolerance = 1.0;
-    [LiushWiFiStrongestLog liush_wifistrongest_log:@"引擎启动，静默校验间隔 %.0fs", LiushWiFiStrongestTickInterval];
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+        (__bridge const void *)self, liush_wifistrongest_selfCheckCallback,
+        (__bridge CFStringRef)LiushWiFiStrongestSelfCheckNotification, NULL,
+        CFNotificationSuspensionBehaviorDeliverImmediately);
+    [LiushWiFiStrongestLog liush_wifistrongest_log:@"引擎启动 v%s，静默校验间隔 %.0fs",
+        LIUSH_WIFISTRONGEST_VERSION, LiushWiFiStrongestTickInterval];
+    [self liush_wifistrongest_selfCheck];
+}
+
+// 一段能独立看懂的自检：即使「详细日志」是关的，也写进日志。
+// 目的是让老总只发这一段就能定位问题，不用猜。
+- (void)liush_wifistrongest_selfCheck {
+    LiushWiFiStrongestConfig *config = [LiushWiFiStrongestConfig liush_wifistrongest_shared];
+    LiushWiFiStrongestMobileWiFi *wifi = [LiushWiFiStrongestMobileWiFi liush_wifistrongest_shared];
+    BOOL enabled = [config liush_wifistrongest_isEnabled];
+    BOOL canScan = [wifi liush_wifistrongest_canScan];
+
+    NSString *ssid = nil;
+    NSInteger rssi = 0;
+    NSInteger channel = 0;
+    BOOL connected = [wifi liush_wifistrongest_readCurrentSSID:&ssid rssi:&rssi channel:&channel];
+
+    NSInteger interval = MAX((NSInteger)5, [config liush_wifistrongest_integerForKey:@"scanInterval" defaultValue:20]);
+    NSInteger forceThreshold = [config liush_wifistrongest_integerForKey:@"forceThreshold" defaultValue:-80];
+    NSInteger intervalThreshold = [config liush_wifistrongest_integerForKey:@"intervalThreshold" defaultValue:-65];
+    NSInteger minDelta = [config liush_wifistrongest_integerForKey:@"minDelta" defaultValue:8];
+    NSInteger cooldown = [config liush_wifistrongest_integerForKey:@"failCooldown" defaultValue:300];
+
+    [LiushWiFiStrongestLog liush_wifistrongest_log:@"==== 自检 v%s · 进程 %@ ====",
+        LIUSH_WIFISTRONGEST_VERSION, [[NSProcessInfo processInfo] processName]];
+    [LiushWiFiStrongestLog liush_wifistrongest_log:@"总开关：%@",
+        enabled ? @"已启用" : @"已关闭（设置里打开「启用插件」后才会工作）"];
+    [LiushWiFiStrongestLog liush_wifistrongest_log:@"扫描能力：%@ | %@",
+        canScan ? @"可用" : @"不可用", [wifi liush_wifistrongest_diagnostic]];
+    [LiushWiFiStrongestLog liush_wifistrongest_log:@"当前网络：%@",
+        connected ? [NSString stringWithFormat:@"%@ %lddBm 信道 %ld", ssid, (long)rssi, (long)channel]
+                  : @"未连接"];
+    [LiushWiFiStrongestLog liush_wifistrongest_log:
+        @"参数：间隔 %lds | 强制阈值 %ld | 区间阈值 %ld | 最小差值 %ld | 失败冷却 %lds | 白名单 %lu 个 | 5G偏好 %@ | 未连接自动连 %@ | 锁屏跳过 %@ | 详细日志 %@",
+        (long)interval, (long)forceThreshold, (long)intervalThreshold, (long)minDelta, (long)cooldown,
+        (unsigned long)[config liush_wifistrongest_whitelist].count,
+        [config liush_wifistrongest_prefer5G] ? @"开" : @"关",
+        [config liush_wifistrongest_boolForKey:@"autoJoinWhenDisconnected" defaultValue:NO] ? @"开" : @"关",
+        [config liush_wifistrongest_skipWhenLocked] ? @"开" : @"关",
+        [config liush_wifistrongest_debugLog] ? @"开" : @"关"];
+
+    if (!canScan) {
+        [LiushWiFiStrongestLog liush_wifistrongest_log:
+            @"结论：扫描与切换不可用（缺 wlan entitlement 或私有符号），只能给只读信号。"];
+    } else if (!enabled) {
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"结论：能力正常，但总开关关着，本轮不会扫描。"];
+    } else {
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"结论：能力与开关都正常，等待节拍判定。"];
+    }
+    [LiushWiFiStrongestLog liush_wifistrongest_log:@"==== 自检结束 ===="];
+}
+
+// 同一个原因只写一次，除非中途真的做过动作（做动作时会把 lastReason 清空）。
+- (void)liush_wifistrongest_note:(NSString *)reason {
+    if (reason.length == 0) return;
+    if (self.lastReason && [self.lastReason isEqualToString:reason]) return;
+    self.lastReason = reason;
+    [LiushWiFiStrongestLog liush_wifistrongest_log:@"%@", reason];
 }
 
 - (void)liush_wifistrongest_reloadTimer {
@@ -96,13 +172,37 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
 
 - (void)liush_wifistrongest_tick:(NSTimer *)timer {
     LiushWiFiStrongestConfig *config = [LiushWiFiStrongestConfig liush_wifistrongest_shared];
-    if (![config liush_wifistrongest_isEnabled]) return;
-    if ([config liush_wifistrongest_skipWhenLocked] && [self liush_wifistrongest_screenIsLocked]) return;
+    if (![config liush_wifistrongest_isEnabled]) {
+        [self liush_wifistrongest_note:@"节拍暂停：总开关未启用（设置 → WiFi 择优切换 → 启用插件）"];
+        return;
+    }
+    if ([config liush_wifistrongest_skipWhenLocked] && [self liush_wifistrongest_screenIsLocked]) {
+        [self liush_wifistrongest_note:@"节拍暂停：锁屏中（可关掉「锁屏时不扫描」）"];
+        return;
+    }
+    self.tickCount += 1;
+    if (self.tickCount % 60 == 0) {
+        LiushWiFiStrongestMobileWiFi *wifi = [LiushWiFiStrongestMobileWiFi liush_wifistrongest_shared];
+        NSString *ssid = nil;
+        NSInteger rssi = 0;
+        NSInteger channel = 0;
+        BOOL connected = [wifi liush_wifistrongest_readCurrentSSID:&ssid rssi:&rssi channel:&channel];
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"心跳：%@ | 上次扫描见到 %ld 个网络",
+            connected ? [NSString stringWithFormat:@"%@ %lddBm", ssid, (long)rssi] : @"未连接",
+            (long)self.lastScanCount];
+    }
     [self liush_wifistrongest_enqueueForced:NO];
 }
 
 - (void)liush_wifistrongest_enqueueForced:(BOOL)forced {
-    if (self.busy) return;
+    if (self.busy) {
+        // 手动扫描不能被丢掉：排到本轮结束后立刻执行。
+        if (forced) {
+            self.pendingForced = YES;
+            [LiushWiFiStrongestLog liush_wifistrongest_log:@"正在判定中，本次手动扫描已排队"];
+        }
+        return;
+    }
     self.busy = YES;
     __weak LiushWiFiStrongestEngine *weakSelf = self;
     dispatch_async(self.queue, ^{
@@ -112,6 +212,10 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
             [strongSelf liush_wifistrongest_evaluateForced:forced];
         }
         strongSelf.busy = NO;
+        if (strongSelf.pendingForced) {
+            strongSelf.pendingForced = NO;
+            [strongSelf liush_wifistrongest_enqueueForced:YES];
+        }
     });
 }
 
@@ -151,6 +255,7 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
             snapshot[@"note"] = @"插件已停用，未执行扫描";
             liush_wifistrongest_writeSnapshot(snapshot);
         }
+        [self liush_wifistrongest_note:@"判定跳过：总开关未启用（设置 → WiFi 择优切换 → 启用插件）"];
         return;
     }
 
@@ -170,6 +275,7 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
                                                             defaultValue:-65];
 
     if (self.lastSwitch && -[self.lastSwitch timeIntervalSinceNow] < LiushWiFiStrongestPostSwitchQuiet) {
+        [self liush_wifistrongest_note:@"判定跳过：刚切换过，静默 20s 等网络稳定"];
         return;
     }
     BOOL urgent = connected && currentRSSI < forceThreshold;
@@ -185,11 +291,8 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
     }
 
     if (![wifi liush_wifistrongest_canScan]) {
-        if (!self.warnedNoScan) {
-            self.warnedNoScan = YES;
-            [LiushWiFiStrongestLog liush_wifistrongest_log:@"无法扫描（%@），仅能做只读判断；请查看日志首行诊断",
-                [wifi liush_wifistrongest_diagnostic]];
-        }
+        [self liush_wifistrongest_note:[NSString stringWithFormat:
+            @"判定中止：无法扫描（%@），只更新只读信息", [wifi liush_wifistrongest_diagnostic]]];
         self.lastEvaluation = [NSDate date];
         NSMutableDictionary *snapshot = [[wifi liush_wifistrongest_snapshot] mutableCopy];
         if (snapshot) {
@@ -198,16 +301,24 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
         }
         return;
     }
-    self.warnedNoScan = NO;
+    NSInteger previousCount = self.lastScanCount;
     self.lastEvaluation = [NSDate date];
 
     NSArray<NSDictionary *> *networks = [wifi liush_wifistrongest_scanNetworks];
-    [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"扫描到 %lu 个网络，当前 %@ %lddBm(信道%ld)",
-        (unsigned long)networks.count, (currentSSID ?: @"未连接"), (long)currentRSSI, (long)currentChannel];
+    self.lastScanCount = (NSInteger)networks.count;
+    self.lastReason = nil;  // 真的扫过了，允许下一次如实记录“为什么没切”
+    if (forced || networks.count != previousCount) {
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"扫描：%lu 个网络 | 当前 %@ %lddBm 信道 %ld",
+            (unsigned long)networks.count, (currentSSID ?: @"未连接"),
+            (long)currentRSSI, (long)currentChannel];
+    }
     liush_wifistrongest_writeSnapshot([wifi liush_wifistrongest_snapshot]);
 
     BOOL autoJoin = [config liush_wifistrongest_boolForKey:@"autoJoinWhenDisconnected" defaultValue:NO];
-    if (!connected && !autoJoin) return;
+    if (!connected && !autoJoin) {
+        [self liush_wifistrongest_note:@"判定跳过：当前没连 WiFi，且「未连接时自动连最强」是关的（详情页仍会更新）"];
+        return;
+    }
 
     BOOL prefer5G = [config liush_wifistrongest_prefer5G];
     NSInteger prefer5GBonus = [config liush_wifistrongest_integerForKey:@"prefer5GMaxDiff" defaultValue:15];
@@ -238,13 +349,17 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
     }
 
     if (!best) {
-        [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"没有可切换的候选网络"];
+        [self liush_wifistrongest_note:[NSString stringWithFormat:
+            @"判定跳过：没有可切换的候选（可见 %lu 个，%lu 个被同 SSID/白名单/冷却过滤掉）",
+            (unsigned long)networks.count,
+            (unsigned long)MAX((NSInteger)0, (NSInteger)networks.count - (connected ? 1 : 0))]];
         return;
     }
     double improvement = bestScore - currentScore;
     if (improvement < (double)minDelta) {
-        [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"最优候选 %@(%lddBm) 提升 %.1f 分，未达最小差值 %ld",
-            best[@"ssid"], (long)[best[@"rssi"] integerValue], improvement, (long)minDelta];
+        [self liush_wifistrongest_note:[NSString stringWithFormat:
+            @"判定跳过：最优候选 %@(%lddBm) 只提升 %.1f 分，未达最小差值 %ld",
+            best[@"ssid"], (long)[best[@"rssi"] integerValue], improvement, (long)minDelta]];
         return;
     }
 
