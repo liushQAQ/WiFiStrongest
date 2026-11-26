@@ -19,6 +19,7 @@
                      set:nil get:nil detail:nil cell:PSGroupCell edit:nil]];
         [self liush_wifistrongest_addButton:@"立即扫描一次" action:@selector(liush_wifistrongest_forceScanOnce:) to:items];
         [self liush_wifistrongest_addButton:@"查看运行日志" action:@selector(liush_wifistrongest_showLog:) to:items];
+        [self liush_wifistrongest_addButton:@"复制日志（发 AI 排障）" action:@selector(liush_wifistrongest_copyLog:) to:items];
         [self liush_wifistrongest_addButton:@"清空日志" action:@selector(liush_wifistrongest_clearLog:) to:items];
         [items addObject:[PSSpecifier preferenceSpecifierNamed:@"关于" target:self
                      set:nil get:nil detail:nil cell:PSGroupCell edit:nil]];
@@ -73,6 +74,18 @@
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"运行日志"
         message:tail preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"关闭" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)liush_wifistrongest_copyLog:(id)sender {
+    NSString *tail = [LiushWiFiStrongestLog liush_wifistrongest_tailWithLines:120];
+    if (tail.length == 0) {
+        tail = @"暂无日志。请确认插件已启用，然后点「立即扫描一次」。";
+    }
+    [UIPasteboard generalPasteboard].string = tail;
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"已复制到剪贴板"
+        message:@"日志已复制，可直接粘贴发送给 AI 排障。" preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];
 }
 
