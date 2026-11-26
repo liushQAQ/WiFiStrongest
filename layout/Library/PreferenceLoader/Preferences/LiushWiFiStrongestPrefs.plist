@@ -4,9 +4,9 @@
 <dict>
     <key>entry</key>
     <dict>
-        <key>bundle</key><string>AxsWiFiStrongestPrefs</string>
+        <key>bundle</key><string>LiushWiFiStrongestPrefs</string>
         <key>cell</key><string>PSLinkCell</string>
-        <key>detail</key><string>AxsWiFiStrongestRootListController</string>
+        <key>detail</key><string>LiushWiFiStrongestRootListController</string>
         <key>icon</key><string>icon</string>        
         <key>isController</key><true/>
         <key>label</key><string>WiFi 择优切换</string>

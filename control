@@ -1,11 +1,9 @@
-Package: com.axs.wifistrongest
+Package: com.liush.wifistrongest
 Name: WiFi 择优切换
 Version: 5.2.0
 Architecture: iphoneos-arm
 Description: 自动切换到信号更强的已知 WiFi（rootless）
-Maintainer: Axs
-Author: Axs
-Section: Axs-Tweaks
+Maintainer: Liush
+Author: Liush
+Section: Liush-Tweaks
 Depends: ellekit, preferenceloader, firmware (>= 15.0)
-Icon: https://axs66.github.io/pro/icon/wifistrongest.png
-Sileodepiction: https://axs66.github.io/pro/sileodepiction/wifistrongest/js.json

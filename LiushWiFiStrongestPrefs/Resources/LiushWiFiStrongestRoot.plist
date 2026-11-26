@@ -14,21 +14,21 @@
             <key>cell</key><string>PSSwitchCell</string>
             <key>label</key><string>启用插件</string>
             <key>key</key><string>enabled</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><true/>
         </dict>
         <dict>
             <key>cell</key><string>PSSwitchCell</string>
             <key>label</key><string>锁屏时不扫描</string>
             <key>key</key><string>skipWhenLocked</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><true/>
         </dict>
         <dict>
             <key>cell</key><string>PSSwitchCell</string>
             <key>label</key><string>输出详细日志</string>
             <key>key</key><string>debugLog</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><false/>
         </dict>
 
@@ -41,7 +41,7 @@
             <key>cell</key><string>PSEditTextCell</string>
             <key>label</key><string>扫描间隔（秒）</string>
             <key>key</key><string>scanInterval</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><string>20</string>
             <key>keyboard</key><string>NumbersAndPunctuation</string>
         </dict>
@@ -49,7 +49,7 @@
             <key>cell</key><string>PSEditTextCell</string>
             <key>label</key><string>强制扫描阈值（dBm）</string>
             <key>key</key><string>forceThreshold</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><string>-80</string>
             <key>keyboard</key><string>NumbersAndPunctuation</string>
         </dict>
@@ -57,7 +57,7 @@
             <key>cell</key><string>PSEditTextCell</string>
             <key>label</key><string>区间阈值（dBm）</string>
             <key>key</key><string>intervalThreshold</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><string>-65</string>
             <key>keyboard</key><string>NumbersAndPunctuation</string>
         </dict>
@@ -65,7 +65,7 @@
             <key>cell</key><string>PSEditTextCell</string>
             <key>label</key><string>最小切换差值（%）</string>
             <key>key</key><string>minDelta</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><string>8</string>
             <key>keyboard</key><string>NumbersAndPunctuation</string>
         </dict>
@@ -78,14 +78,14 @@
             <key>cell</key><string>PSSwitchCell</string>
             <key>label</key><string>优先 5GHz</string>
             <key>key</key><string>prefer5G</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><true/>
         </dict>
         <dict>
             <key>cell</key><string>PSEditTextCell</string>
             <key>label</key><string>5GHz 容忍差值（%）</string>
             <key>key</key><string>prefer5GMaxDiff</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><string>15</string>
             <key>keyboard</key><string>NumbersAndPunctuation</string>
         </dict>
@@ -99,7 +99,7 @@
             <key>cell</key><string>PSEditTextCell</string>
             <key>label</key><string>白名单 SSID</string>
             <key>key</key><string>whitelist</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><string></string>
             <key>keyboard</key><string>Default</string>
             <key>autoCapitalizationType</key><string>None</string>
@@ -109,14 +109,14 @@
             <key>cell</key><string>PSSwitchCell</string>
             <key>label</key><string>未连接时自动连最强</string>
             <key>key</key><string>autoJoinWhenDisconnected</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><false/>
         </dict>
         <dict>
             <key>cell</key><string>PSEditTextCell</string>
             <key>label</key><string>失败冷却（秒）</string>
             <key>key</key><string>failCooldown</string>
-            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>defaults</key><string>com.liush.wifistrongest</string>
             <key>default</key><string>300</string>
             <key>keyboard</key><string>NumbersAndPunctuation</string>
         </dict>

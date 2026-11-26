@@ -8,7 +8,7 @@
 #import <rootless.h>
 #endif
 
-static inline NSString *axs_wifistrongest_resourcePath(NSString *rootfsPath) {
+static inline NSString *liush_wifistrongest_resourcePath(NSString *rootfsPath) {
 #ifdef THEOS_PACKAGE_SCHEME_ROOTHIDE
     return jbroot(rootfsPath);
 #else
@@ -16,8 +16,8 @@ static inline NSString *axs_wifistrongest_resourcePath(NSString *rootfsPath) {
 #endif
 }
 
-static inline NSString *axs_wifistrongest_preferencesPath(void) {
-    NSString *path = @"/var/mobile/Library/Preferences/com.axs.wifistrongest.plist";
+static inline NSString *liush_wifistrongest_preferencesPath(void) {
+    NSString *path = @"/var/mobile/Library/Preferences/com.liush.wifistrongest.plist";
 #ifdef THEOS_PACKAGE_SCHEME_ROOTHIDE
     return jbroot(path);
 #else

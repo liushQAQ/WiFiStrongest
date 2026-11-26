@@ -2,29 +2,29 @@
 
 #import <Foundation/Foundation.h>
 #import <CoreFoundation/CoreFoundation.h>
-#import "AxsWiFiStrongestPaths.h"
+#import "LiushWiFiStrongestPaths.h"
 
-static NSString * const AxsWiFiStrongestPreferencesDomain = @"com.axs.wifistrongest";
-static NSString * const AxsWiFiStrongestPreferencesChanged = @"com.axs.wifistrongest.preferences-changed";
+static NSString * const LiushWiFiStrongestPreferencesDomain = @"com.liush.wifistrongest";
+static NSString * const LiushWiFiStrongestPreferencesChanged = @"com.liush.wifistrongest.preferences-changed";
 
-static inline NSDictionary *axs_wifistrongest_readPreferences(void) {
-    NSString *path = axs_wifistrongest_preferencesPath();
+static inline NSDictionary *liush_wifistrongest_readPreferences(void) {
+    NSString *path = liush_wifistrongest_preferencesPath();
     NSDictionary *values = path.length > 0 ? [NSDictionary dictionaryWithContentsOfFile:path] : nil;
     if ([values isKindOfClass:[NSDictionary class]]) {
         return values;
     }
     // Compatibility fallback, not a second writable file location.
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:AxsWiFiStrongestPreferencesDomain];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:LiushWiFiStrongestPreferencesDomain];
     [defaults synchronize];
-    return [defaults persistentDomainForName:AxsWiFiStrongestPreferencesDomain] ?: @{};
+    return [defaults persistentDomainForName:LiushWiFiStrongestPreferencesDomain] ?: @{};
 }
 
 // The PreferenceBundle is the only caller allowed to write.
-static inline BOOL axs_wifistrongest_writePreference(NSString *key, id value, NSError **error) {
-    NSString *path = axs_wifistrongest_preferencesPath();
+static inline BOOL liush_wifistrongest_writePreference(NSString *key, id value, NSError **error) {
+    NSString *path = liush_wifistrongest_preferencesPath();
     if (key.length == 0 || path.length == 0) {
         if (error) {
-            *error = [NSError errorWithDomain:AxsWiFiStrongestPreferencesDomain code:1
+            *error = [NSError errorWithDomain:LiushWiFiStrongestPreferencesDomain code:1
                                     userInfo:@{NSLocalizedDescriptionKey: @"Invalid preference path or key"}];
         }
         return NO;
@@ -37,14 +37,14 @@ static inline BOOL axs_wifistrongest_writePreference(NSString *key, id value, NS
                          options:NSPropertyListMutableContainers format:NULL error:error] : nil;
         if (![decoded isKindOfClass:[NSDictionary class]]) {
             if (error && !*error) {
-                *error = [NSError errorWithDomain:AxsWiFiStrongestPreferencesDomain code:2
+                *error = [NSError errorWithDomain:LiushWiFiStrongestPreferencesDomain code:2
                                         userInfo:@{NSLocalizedDescriptionKey: @"Preferences are not a dictionary"}];
             }
             return NO;
         }
         values = [decoded mutableCopy];
     } else {
-        values = [axs_wifistrongest_readPreferences() mutableCopy];
+        values = [liush_wifistrongest_readPreferences() mutableCopy];
     }
     if (value) values[key] = value;
     else [values removeObjectForKey:key];
@@ -57,11 +57,11 @@ static inline BOOL axs_wifistrongest_writePreference(NSString *key, id value, NS
     if (!data || ![data writeToFile:path options:NSDataWritingAtomic error:error]) {
         return NO;
     }
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:AxsWiFiStrongestPreferencesDomain];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:LiushWiFiStrongestPreferencesDomain];
     // Mirror the whole snapshot so cfprefsd cannot flush stale unrelated keys.
-    [defaults setPersistentDomain:values forName:AxsWiFiStrongestPreferencesDomain];
+    [defaults setPersistentDomain:values forName:LiushWiFiStrongestPreferencesDomain];
     [defaults synchronize];
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
-        (__bridge CFStringRef)AxsWiFiStrongestPreferencesChanged, NULL, NULL, true);
+        (__bridge CFStringRef)LiushWiFiStrongestPreferencesChanged, NULL, NULL, true);
     return YES;
 }

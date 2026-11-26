@@ -1,29 +1,29 @@
-#import "AxsWiFiStrongestMobileWiFi.h"
-#import "AxsWiFiStrongestLog.h"
+#import "LiushWiFiStrongestMobileWiFi.h"
+#import "LiushWiFiStrongestLog.h"
 #import <CoreFoundation/CoreFoundation.h>
 #import <objc/message.h>
 #import <dlfcn.h>
 
-typedef void *AxsWiFiStrongestManagerRef;
-typedef void *AxsWiFiStrongestDeviceRef;
-typedef void *AxsWiFiStrongestNetworkRef;
-typedef void (^AxsWiFiStrongestAssocCallback)(int);
+typedef void *LiushWiFiStrongestManagerRef;
+typedef void *LiushWiFiStrongestDeviceRef;
+typedef void *LiushWiFiStrongestNetworkRef;
+typedef void (^LiushWiFiStrongestAssocCallback)(int);
 
-typedef AxsWiFiStrongestManagerRef (*AxsWiFiStrongestCreateFn)(CFAllocatorRef, uint32_t);
-typedef AxsWiFiStrongestDeviceRef (*AxsWiFiStrongestGetDeviceFn)(AxsWiFiStrongestManagerRef);
-typedef CFArrayRef (*AxsWiFiStrongestCopyDevicesFn)(AxsWiFiStrongestManagerRef);
-typedef int (*AxsWiFiStrongestScanFn)(AxsWiFiStrongestManagerRef);
-typedef CFArrayRef (*AxsWiFiStrongestCopyNetworksFn)(AxsWiFiStrongestManagerRef);
-typedef AxsWiFiStrongestNetworkRef (*AxsWiFiStrongestCurrentNetworkFn)(AxsWiFiStrongestDeviceRef);
-typedef CFStringRef (*AxsWiFiStrongestSSIDFn)(AxsWiFiStrongestNetworkRef);
-typedef int (*AxsWiFiStrongestNetworkIntFn)(AxsWiFiStrongestNetworkRef);
-typedef BOOL (*AxsWiFiStrongestNetworkBoolFn)(AxsWiFiStrongestNetworkRef);
-typedef void (*AxsWiFiStrongestAssociateFn)(AxsWiFiStrongestDeviceRef,
-                                            AxsWiFiStrongestNetworkRef,
-                                            AxsWiFiStrongestAssocCallback);
+typedef LiushWiFiStrongestManagerRef (*LiushWiFiStrongestCreateFn)(CFAllocatorRef, uint32_t);
+typedef LiushWiFiStrongestDeviceRef (*LiushWiFiStrongestGetDeviceFn)(LiushWiFiStrongestManagerRef);
+typedef CFArrayRef (*LiushWiFiStrongestCopyDevicesFn)(LiushWiFiStrongestManagerRef);
+typedef int (*LiushWiFiStrongestScanFn)(LiushWiFiStrongestManagerRef);
+typedef CFArrayRef (*LiushWiFiStrongestCopyNetworksFn)(LiushWiFiStrongestManagerRef);
+typedef LiushWiFiStrongestNetworkRef (*LiushWiFiStrongestCurrentNetworkFn)(LiushWiFiStrongestDeviceRef);
+typedef CFStringRef (*LiushWiFiStrongestSSIDFn)(LiushWiFiStrongestNetworkRef);
+typedef int (*LiushWiFiStrongestNetworkIntFn)(LiushWiFiStrongestNetworkRef);
+typedef BOOL (*LiushWiFiStrongestNetworkBoolFn)(LiushWiFiStrongestNetworkRef);
+typedef void (*LiushWiFiStrongestAssociateFn)(LiushWiFiStrongestDeviceRef,
+                                            LiushWiFiStrongestNetworkRef,
+                                            LiushWiFiStrongestAssocCallback);
 
 // 私有符号在不同 iOS 版本上改名频繁，按候选名逐个尝试。
-static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *candidates) {
+static void *liush_wifistrongest_resolveSymbol(void *handle, const char *const *candidates) {
     for (const char *const *name = candidates; *name; name++) {
         void *symbol = handle ? dlsym(handle, *name) : NULL;
         if (symbol) return symbol;
@@ -31,27 +31,27 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
     return NULL;
 }
 
-@implementation AxsWiFiStrongestMobileWiFi {
+@implementation LiushWiFiStrongestMobileWiFi {
     void *_handle;
-    AxsWiFiStrongestManagerRef _manager;
-    AxsWiFiStrongestDeviceRef _device;
-    AxsWiFiStrongestCreateFn _create;
-    AxsWiFiStrongestGetDeviceFn _getDevice;
-    AxsWiFiStrongestCopyDevicesFn _copyDevices;
-    AxsWiFiStrongestScanFn _scan;
-    AxsWiFiStrongestCopyNetworksFn _copyNetworks;
-    AxsWiFiStrongestCurrentNetworkFn _currentNetwork;
-    AxsWiFiStrongestSSIDFn _networkSSID;
-    AxsWiFiStrongestNetworkIntFn _networkRSSI;
-    AxsWiFiStrongestNetworkIntFn _networkChannel;
-    AxsWiFiStrongestAssociateFn _associate;
+    LiushWiFiStrongestManagerRef _manager;
+    LiushWiFiStrongestDeviceRef _device;
+    LiushWiFiStrongestCreateFn _create;
+    LiushWiFiStrongestGetDeviceFn _getDevice;
+    LiushWiFiStrongestCopyDevicesFn _copyDevices;
+    LiushWiFiStrongestScanFn _scan;
+    LiushWiFiStrongestCopyNetworksFn _copyNetworks;
+    LiushWiFiStrongestCurrentNetworkFn _currentNetwork;
+    LiushWiFiStrongestSSIDFn _networkSSID;
+    LiushWiFiStrongestNetworkIntFn _networkRSSI;
+    LiushWiFiStrongestNetworkIntFn _networkChannel;
+    LiushWiFiStrongestAssociateFn _associate;
     NSArray *_scanned;
     NSMutableArray<NSString *> *_missing;
     BOOL _resolved;
 }
 
-+ (instancetype)axs_wifistrongest_shared {
-    static AxsWiFiStrongestMobileWiFi *instance;
++ (instancetype)liush_wifistrongest_shared {
+    static LiushWiFiStrongestMobileWiFi *instance;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         instance = [[self alloc] init];
@@ -63,18 +63,18 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
     self = [super init];
     if (self) {
         _missing = [NSMutableArray array];
-        [self axs_wifistrongest_resolve];
+        [self liush_wifistrongest_resolve];
     }
     return self;
 }
 
-- (void)axs_wifistrongest_resolve {
+- (void)liush_wifistrongest_resolve {
     if (_resolved) return;
     _resolved = YES;
     _handle = dlopen("/System/Library/PrivateFrameworks/MobileWiFi.framework/MobileWiFi", RTLD_NOW);
     if (!_handle) {
         [_missing addObject:@"MobileWiFi.framework"];
-        [AxsWiFiStrongestLog axs_wifistrongest_log:@"私有框架打不开，降级为 SBWiFiManager 只读模式"];
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"私有框架打不开，降级为 SBWiFiManager 只读模式"];
         return;
     }
     static const char *const createNames[] = {"WiFiManagerClientCreate", NULL};
@@ -90,16 +90,16 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
     static const char *const associateNames[] = {"WiFiDeviceClientAssociateAsync",
                                                  "WiFiDeviceClientAssociate", NULL};
 
-    _create = (AxsWiFiStrongestCreateFn)axs_wifistrongest_resolveSymbol(_handle, createNames);
-    _getDevice = (AxsWiFiStrongestGetDeviceFn)axs_wifistrongest_resolveSymbol(_handle, getDeviceNames);
-    _copyDevices = (AxsWiFiStrongestCopyDevicesFn)axs_wifistrongest_resolveSymbol(_handle, copyDevicesNames);
-    _scan = (AxsWiFiStrongestScanFn)axs_wifistrongest_resolveSymbol(_handle, scanNames);
-    _copyNetworks = (AxsWiFiStrongestCopyNetworksFn)axs_wifistrongest_resolveSymbol(_handle, copyNetworksNames);
-    _currentNetwork = (AxsWiFiStrongestCurrentNetworkFn)axs_wifistrongest_resolveSymbol(_handle, currentNames);
-    _networkSSID = (AxsWiFiStrongestSSIDFn)axs_wifistrongest_resolveSymbol(_handle, ssidNames);
-    _networkRSSI = (AxsWiFiStrongestNetworkIntFn)axs_wifistrongest_resolveSymbol(_handle, rssiNames);
-    _networkChannel = (AxsWiFiStrongestNetworkIntFn)axs_wifistrongest_resolveSymbol(_handle, channelNames);
-    _associate = (AxsWiFiStrongestAssociateFn)axs_wifistrongest_resolveSymbol(_handle, associateNames);
+    _create = (LiushWiFiStrongestCreateFn)liush_wifistrongest_resolveSymbol(_handle, createNames);
+    _getDevice = (LiushWiFiStrongestGetDeviceFn)liush_wifistrongest_resolveSymbol(_handle, getDeviceNames);
+    _copyDevices = (LiushWiFiStrongestCopyDevicesFn)liush_wifistrongest_resolveSymbol(_handle, copyDevicesNames);
+    _scan = (LiushWiFiStrongestScanFn)liush_wifistrongest_resolveSymbol(_handle, scanNames);
+    _copyNetworks = (LiushWiFiStrongestCopyNetworksFn)liush_wifistrongest_resolveSymbol(_handle, copyNetworksNames);
+    _currentNetwork = (LiushWiFiStrongestCurrentNetworkFn)liush_wifistrongest_resolveSymbol(_handle, currentNames);
+    _networkSSID = (LiushWiFiStrongestSSIDFn)liush_wifistrongest_resolveSymbol(_handle, ssidNames);
+    _networkRSSI = (LiushWiFiStrongestNetworkIntFn)liush_wifistrongest_resolveSymbol(_handle, rssiNames);
+    _networkChannel = (LiushWiFiStrongestNetworkIntFn)liush_wifistrongest_resolveSymbol(_handle, channelNames);
+    _associate = (LiushWiFiStrongestAssociateFn)liush_wifistrongest_resolveSymbol(_handle, associateNames);
 
     if (!_create) [_missing addObject:@"WiFiManagerClientCreate"];
     if (!_scan) [_missing addObject:@"WiFiManagerClientScanNetworks"];
@@ -114,7 +114,7 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
         _manager = _create(kCFAllocatorDefault, 0);
         if (!_manager) {
             [_missing addObject:@"WiFiManagerClient(空):缺少 wlan entitlement"];
-            [AxsWiFiStrongestLog axs_wifistrongest_log:@"WiFiManagerClientCreate 返回 NULL，扫描不可用"];
+            [LiushWiFiStrongestLog liush_wifistrongest_log:@"WiFiManagerClientCreate 返回 NULL，扫描不可用"];
         }
     }
     if (_manager) {
@@ -122,32 +122,32 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
         if (!_device && _copyDevices) {
             NSArray *devices = CFBridgingRelease(_copyDevices(_manager));
             if ([devices isKindOfClass:[NSArray class]] && devices.count > 0) {
-                _device = (__bridge AxsWiFiStrongestDeviceRef)devices.firstObject;
+                _device = (__bridge LiushWiFiStrongestDeviceRef)devices.firstObject;
                 CFRetain((__bridge CFTypeRef)devices);
             }
         }
     }
-    [AxsWiFiStrongestLog axs_wifistrongest_log:@"私有 API 解析：%@，缺失：%@",
+    [LiushWiFiStrongestLog liush_wifistrongest_log:@"私有 API 解析：%@，缺失：%@",
         (_manager ? @"可用" : @"不可用"),
         (_missing.count ? [_missing componentsJoinedByString:@", "] : @"无")];
 }
 
-- (BOOL)axs_wifistrongest_available {
+- (BOOL)liush_wifistrongest_available {
     return _manager != NULL;
 }
 
-- (BOOL)axs_wifistrongest_canScan {
+- (BOOL)liush_wifistrongest_canScan {
     return _manager != NULL && _scan && _copyNetworks && _networkSSID && _networkRSSI;
 }
 
-- (NSString *)axs_wifistrongest_diagnostic {
+- (NSString *)liush_wifistrongest_diagnostic {
     return [NSString stringWithFormat:@"manager=%@ device=%@ 缺失=%@",
             (_manager ? @"是" : @"否"), (_device ? @"是" : @"否"),
             (_missing.count ? [_missing componentsJoinedByString:@" | "] : @"无")];
 }
 
 // entitlement 缺失时的只读降级：从 SpringBoard 自己的 SBWiFiManager 取 SSID 与信号格数。
-- (BOOL)axs_wifistrongest_readFallbackSSID:(NSString **)ssid rssi:(NSInteger *)rssi {
+- (BOOL)liush_wifistrongest_readFallbackSSID:(NSString **)ssid rssi:(NSInteger *)rssi {
     Class managerClass = NSClassFromString(@"SBWiFiManager");
     if (!managerClass || ![managerClass respondsToSelector:@selector(sharedInstance)]) return NO;
     id manager = ((id (*)(id, SEL))objc_msgSend)(managerClass, @selector(sharedInstance));
@@ -166,14 +166,14 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
     return YES;
 }
 
-- (BOOL)axs_wifistrongest_readCurrentSSID:(NSString **)ssid
+- (BOOL)liush_wifistrongest_readCurrentSSID:(NSString **)ssid
                                      rssi:(NSInteger *)rssi
                                   channel:(NSInteger *)channel {
     if (ssid) *ssid = nil;
     if (rssi) *rssi = 0;
     if (channel) *channel = 0;
     if (_manager && _device && _currentNetwork && _networkSSID) {
-        AxsWiFiStrongestNetworkRef network = _currentNetwork(_device);
+        LiushWiFiStrongestNetworkRef network = _currentNetwork(_device);
         if (network) {
             CFStringRef name = _networkSSID(network);
             if (name && CFGetTypeID(name) == CFStringGetTypeID() && CFStringGetLength(name) > 0) {
@@ -184,22 +184,22 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
             }
         }
     }
-    return [self axs_wifistrongest_readFallbackSSID:ssid rssi:rssi];
+    return [self liush_wifistrongest_readFallbackSSID:ssid rssi:rssi];
 }
 
-- (NSArray<NSDictionary *> *)axs_wifistrongest_scanNetworks {
+- (NSArray<NSDictionary *> *)liush_wifistrongest_scanNetworks {
     _scanned = nil;
-    if (![self axs_wifistrongest_canScan]) return @[];
+    if (![self liush_wifistrongest_canScan]) return @[];
     _scan(_manager);
     NSArray *networks = CFBridgingRelease(_copyNetworks(_manager));
     if (![networks isKindOfClass:[NSArray class]] || networks.count == 0) {
-        [AxsWiFiStrongestLog axs_wifistrongest_verbose:@"扫描结果为空"];
+        [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"扫描结果为空"];
         return @[];
     }
     _scanned = networks;
     NSMutableArray<NSDictionary *> *result = [NSMutableArray arrayWithCapacity:networks.count];
     for (id item in networks) {
-        AxsWiFiStrongestNetworkRef network = (__bridge AxsWiFiStrongestNetworkRef)item;
+        LiushWiFiStrongestNetworkRef network = (__bridge LiushWiFiStrongestNetworkRef)item;
         CFStringRef name = _networkSSID(network);
         if (!name || CFGetTypeID(name) != CFStringGetTypeID() || CFStringGetLength(name) == 0) continue;
         NSInteger networkRSSI = _networkRSSI ? _networkRSSI(network) : -100;
@@ -214,11 +214,11 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
     return result;
 }
 
-- (BOOL)axs_wifistrongest_associateToSSID:(NSString *)ssid {
+- (BOOL)liush_wifistrongest_associateToSSID:(NSString *)ssid {
     if (ssid.length == 0 || !_device || !_associate || !_networkSSID) return NO;
-    AxsWiFiStrongestNetworkRef target = NULL;
+    LiushWiFiStrongestNetworkRef target = NULL;
     for (id item in _scanned) {
-        AxsWiFiStrongestNetworkRef network = (__bridge AxsWiFiStrongestNetworkRef)item;
+        LiushWiFiStrongestNetworkRef network = (__bridge LiushWiFiStrongestNetworkRef)item;
         CFStringRef name = _networkSSID(network);
         if (!name || CFGetTypeID(name) != CFStringGetTypeID()) continue;
         if ([(__bridge NSString *)name isEqualToString:ssid]) {
@@ -227,7 +227,7 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
         }
     }
     if (!target) {
-        [AxsWiFiStrongestLog axs_wifistrongest_log:@"关联失败：扫描结果里找不到 %@", ssid];
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"关联失败：扫描结果里找不到 %@", ssid];
         return NO;
     }
     __block int code = -1;
@@ -239,10 +239,10 @@ static void *axs_wifistrongest_resolveSymbol(void *handle, const char *const *ca
     long waited = dispatch_semaphore_wait(semaphore,
         dispatch_time(DISPATCH_TIME_NOW, (int64_t)(20 * NSEC_PER_SEC)));
     if (waited != 0) {
-        [AxsWiFiStrongestLog axs_wifistrongest_log:@"关联 %@ 超时（20s）", ssid];
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"关联 %@ 超时（20s）", ssid];
         return NO;
     }
-    [AxsWiFiStrongestLog axs_wifistrongest_log:@"关联 %@ 返回码 %d", ssid, code];
+    [LiushWiFiStrongestLog liush_wifistrongest_log:@"关联 %@ 返回码 %d", ssid, code];
     return code == 0;
 }
 

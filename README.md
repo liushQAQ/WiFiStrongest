@@ -1,8 +1,8 @@
-# AxsWiFiStrongest · WiFi 择优切换
+# LiushWiFiStrongest · WiFi 择优切换
 
 越狱插件（Theos tweak），在 Dopamine / ElleKit（rootless，`/var/jb`）环境下，按 RSSI 在不同 SSID 之间自动切换到信号更强的已知 WiFi。
 
-- 包名：`com.axs.wifistrongest`
+- 包名：`com.liush.wifistrongest`
 - 注入进程：SpringBoard（`com.apple.springboard`）
 - 最低系统：iOS 15.0，架构 arm64 / arm64e
 - 显示名：WiFi 择优切换
@@ -15,12 +15,12 @@ StrongerFi（tateu，iOS 12–14，闭源，已停更于 2019）没有公开源�
 
 | 路径 | 职责 |
 |---|---|
-| `Hooks/AxsWiFiStrongestMain.xm` | SpringBoard 启动钩子 + 兜底启动 |
-| `Sources/AxsWiFiStrongestEngine.m` | 节拍、阈值判定、候选打分、切换与冷却 |
-| `Sources/AxsWiFiStrongestMobileWiFi.m` | MobileWiFi 私有框架 dlopen/dlsym 解析与封装 |
-| `Sources/AxsWiFiStrongestConfig.m` | 配置快照（只读，面板是唯一写入方） |
-| `Sources/AxsWiFiStrongestLog.m` | 落盘日志 `/var/mobile/Library/Logs/AxsWiFiStrongest.log` |
-| `AxsWiFiStrongestPrefs/` | PreferenceLoader 面板 + 诊断按钮 |
+| `Hooks/LiushWiFiStrongestMain.xm` | SpringBoard 启动钩子 + 兜底启动 |
+| `Sources/LiushWiFiStrongestEngine.m` | 节拍、阈值判定、候选打分、切换与冷却 |
+| `Sources/LiushWiFiStrongestMobileWiFi.m` | MobileWiFi 私有框架 dlopen/dlsym 解析与封装 |
+| `Sources/LiushWiFiStrongestConfig.m` | 配置快照（只读，面板是唯一写入方） |
+| `Sources/LiushWiFiStrongestLog.m` | 落盘日志 `/var/mobile/Library/Logs/LiushWiFiStrongest.log` |
+| `LiushWiFiStrongestPrefs/` | PreferenceLoader 面板 + 诊断按钮 |
 | `.github/workflows/build.yml` | macOS 上编译 rootless deb 并发布 Release |
 
 ## 判定逻辑
@@ -34,7 +34,7 @@ StrongerFi（tateu，iOS 12–14，闭源，已停更于 2019）没有公开源�
 
 ## 编译
 
-已构建产物：`dist/com.axs.wifistrongest_5.2.0-4_iphoneos-arm64.deb`，源仓库 https://github.com/liushQAQ/WiFiStrongest 。CI 用 `macos-15` runner（`macos-14` 在本账号不可用，会秒取消）。
+已构建产物：`dist/com.liush.wifistrongest_5.2.0-4_iphoneos-arm64.deb`，源仓库 https://github.com/liushQAQ/WiFiStrongest 。CI 用 `macos-15` runner（`macos-14` 在本账号不可用，会秒取消）。
 
 GitHub Actions（推荐，模板已配好 rootless）：
 
@@ -54,7 +54,7 @@ Windows 本机没有 Theos 工具链，不要在本机直接 `make`。
 
 ## 安装
 
-1. 装 `com.axs.wifistrongest_*_iphoneos-arm64.deb`（Sileo / Zebra / `dpkg -i`）。
+1. 装 `com.liush.wifistrongest_*_iphoneos-arm64.deb`（Sileo / Zebra / `dpkg -i`）。
 2. **必须注销（respring）**：插件注入 SpringBoard 才生效。
 3. 打开 设置 → WiFi 择优切换，确认「启用插件」为开；点「立即扫描一次」看日志。
 

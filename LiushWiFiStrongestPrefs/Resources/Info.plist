@@ -2,12 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleExecutable</key><string>AxsWiFiStrongestPrefs</string>
-    <key>CFBundleIdentifier</key><string>com.axs.wifistrongest.preferences</string>
+    <key>CFBundleExecutable</key><string>LiushWiFiStrongestPrefs</string>
+    <key>CFBundleIdentifier</key><string>com.liush.wifistrongest.preferences</string>
     <key>CFBundleName</key><string>WiFi 择优切换</string>
     <key>CFBundlePackageType</key><string>BNDL</string>
     <key>CFBundleShortVersionString</key><string>5.2.0</string>
     <key>CFBundleVersion</key><string>5.2.0</string>
-    <key>NSPrincipalClass</key><string>AxsWiFiStrongestRootListController</string>
+    <key>NSPrincipalClass</key><string>LiushWiFiStrongestRootListController</string>
 </dict>
 </plist>
