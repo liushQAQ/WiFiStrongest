@@ -3,11 +3,13 @@
 #import "LiushWiFiStrongestConfig.h"
 #import "LiushWiFiStrongestLog.h"
 #import "LiushWiFiStrongestDetailController.h"
+#import "LiushWiFiStrongestWhitelistController.h"
 #import <Preferences/PSSpecifier.h>
 #import <UIKit/UIKit.h>
 
 
 @interface LiushWiFiStrongestRootListController ()
+@property (nonatomic, strong) PSSpecifier *whitelistSpecifier;
 @end
 
 @implementation LiushWiFiStrongestRootListController
@@ -16,6 +18,23 @@
     if (!_specifiers) {
         NSMutableArray *items = [[self loadSpecifiersFromPlistName:@"LiushWiFiStrongestRoot"
                                                            target:self] mutableCopy];
+        // 白名单那行换成可点进去的管理页，右侧显示已加数量。
+        for (NSUInteger index = 0; index < items.count; index++) {
+            PSSpecifier *specifier = items[index];
+            if (![[specifier propertyForKey:@"key"] isEqualToString:@"whitelist"]) continue;
+            PSSpecifier *link = [PSSpecifier preferenceSpecifierNamed:@"白名单 SSID（可加多个）"
+                                                              target:self
+                                                                 set:nil
+                                                                 get:@selector(liush_wifistrongest_whitelistSummary:)
+                                                              detail:[LiushWiFiStrongestWhitelistController class]
+                                                                cell:PSLinkCell
+                                                                edit:nil];
+            [link setProperty:@"whitelist" forKey:@"key"];
+            [link setProperty:[specifier propertyForKey:@"footerText"] forKey:@"footerText"];
+            items[index] = link;
+            self.whitelistSpecifier = link;
+            break;
+        }
         // 紧跟 plist 末尾的「网络详情」分组（该组最后一项是「显示弱信号网络」开关）。
         PSSpecifier *detailLink = [PSSpecifier preferenceSpecifierNamed:@"WiFi 详情：信号 / 信道 / MAC"
                                                                 target:self
@@ -44,6 +63,31 @@
                           set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
     item.buttonAction = action;
     [items addObject:item];
+}
+
+// 白名单那行右侧的摘要：留空或数量太多时不逐个列名字，避免撑破一行。
+- (id)liush_wifistrongest_whitelistSummary:(PSSpecifier *)specifier {
+    NSString *raw = liush_wifistrongest_readPreferences()[@"whitelist"];
+    NSMutableArray<NSString *> *list = [NSMutableArray array];
+    if ([raw isKindOfClass:[NSString class]]) {
+        for (NSString *part in [raw componentsSeparatedByCharactersInSet:
+                [NSCharacterSet characterSetWithCharactersInString:@",，;；\n"]]) {
+            NSString *trimmed = [part stringByTrimmingCharactersInSet:
+                                 [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+            if (trimmed.length > 0) [list addObject:trimmed];
+        }
+    }
+    if (list.count == 0) return @"未设置";
+    if (list.count == 1) return list.firstObject;
+    return [NSString stringWithFormat:@"%lu 个", (unsigned long)list.count];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    // 从白名单管理页返回后刷新右侧数量。
+    if (self.whitelistSpecifier && [self respondsToSelector:@selector(reloadSpecifier:)]) {
+        [self reloadSpecifier:self.whitelistSpecifier];
+    }
 }
 
 - (id)readPreferenceValue:(PSSpecifier *)specifier {

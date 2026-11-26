@@ -106,15 +106,11 @@
             <key>footerText</key><string>这两项解决"能切给谁"和"切不动怎么办"。默认只在你已经连着 WiFi 时做切换，不会主动从没网变有网。</string>
         </dict>
         <dict>
-            <key>cell</key><string>PSEditTextCell</string>
-            <key>label</key><string>白名单 SSID</string>
+            <key>cell</key><string>PSLinkCell</string>
+            <key>label</key><string>白名单 SSID（可加多个）</string>
             <key>key</key><string>whitelist</string>
             <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><string></string>
-            <key>keyboard</key><string>Default</string>
-            <key>autoCapitalizationType</key><string>None</string>
-            <key>autoCorrectionType</key><string>None</string>
-            <key>footerText</key><string>留空 = 扫描到的任何网络都可参与比较（缺点：没保存过密码的热点会被尝试、然后失败进冷却）；填了就只切到名单里的网络。多个名字用英文逗号或换行分隔，例如：Home-5G,Office。建议只填自己保存过密码的。</string>
+            <key>footerText</key><string>点进去可加任意多个 SSID：从扫描到的网络里点选，或手动输入。留空 = 扫描到的任何网络都可参与比较（没保存过密码的会被尝试、失败后进冷却）；填了就只切到名单里的网络。建议只填自己保存过密码的。</string>
         </dict>
         <dict>
             <key>cell</key><string>PSSwitchCell</string>
