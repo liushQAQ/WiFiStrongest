@@ -18,6 +18,7 @@ typedef LiushWiFiStrongestNetworkRef (*LiushWiFiStrongestCurrentNetworkFn)(Liush
 typedef CFStringRef (*LiushWiFiStrongestSSIDFn)(LiushWiFiStrongestNetworkRef);
 typedef int (*LiushWiFiStrongestNetworkIntFn)(LiushWiFiStrongestNetworkRef);
 typedef BOOL (*LiushWiFiStrongestNetworkBoolFn)(LiushWiFiStrongestNetworkRef);
+typedef CFTypeRef (*LiushWiFiStrongestGetPropertyFn)(LiushWiFiStrongestNetworkRef, CFStringRef);
 typedef void (*LiushWiFiStrongestAssociateFn)(LiushWiFiStrongestDeviceRef,
                                             LiushWiFiStrongestNetworkRef,
                                             LiushWiFiStrongestAssocCallback);
@@ -30,6 +31,23 @@ static void *liush_wifistrongest_resolveSymbol(void *handle, const char *const *
     }
     return NULL;
 }
+
+// 信号百分比：-100dBm→0，-50dBm 及以上→100。GoodWiFi 的「取消 RSSI 限制」即不做这里的截断。
+static NSInteger liush_wifistrongest_pct(NSInteger rssi) {
+    if (rssi >= -50) return 100;
+    if (rssi <= -100) return 0;
+    return rssi + 100;
+}
+
+@interface LiushWiFiStrongestMobileWiFi ()
+- (NSString *)liush_wifistrongest_bssidFor:(LiushWiFiStrongestNetworkRef)network;
+- (NSInteger)liush_wifistrongest_channelFor:(LiushWiFiStrongestNetworkRef)network;
+- (NSString *)liush_wifistrongest_securityFor:(LiushWiFiStrongestNetworkRef)network;
+- (NSString *)liush_wifistrongest_bandForChannel:(NSInteger)channel;
+- (NSDictionary *)liush_wifistrongest_describeNetwork:(LiushWiFiStrongestNetworkRef)network
+                                             isCurrent:(BOOL)isCurrent
+                                              fallback:(NSDictionary *)fallback;
+@end
 
 @implementation LiushWiFiStrongestMobileWiFi {
     void *_handle;
@@ -44,6 +62,14 @@ static void *liush_wifistrongest_resolveSymbol(void *handle, const char *const *
     LiushWiFiStrongestSSIDFn _networkSSID;
     LiushWiFiStrongestNetworkIntFn _networkRSSI;
     LiushWiFiStrongestNetworkIntFn _networkChannel;
+    LiushWiFiStrongestGetPropertyFn _getProperty;
+    LiushWiFiStrongestSSIDFn _networkBSSID;
+    LiushWiFiStrongestNetworkBoolFn _isWEP;
+    LiushWiFiStrongestNetworkBoolFn _isWPA;
+    LiushWiFiStrongestNetworkBoolFn _isWPA2;
+    LiushWiFiStrongestNetworkBoolFn _isWPA3;
+    LiushWiFiStrongestNetworkBoolFn _isEAP;
+    LiushWiFiStrongestNetworkBoolFn _isSAE;
     LiushWiFiStrongestAssociateFn _associate;
     NSArray *_scanned;
     NSMutableArray<NSString *> *_missing;
@@ -87,6 +113,14 @@ static void *liush_wifistrongest_resolveSymbol(void *handle, const char *const *
     static const char *const ssidNames[] = {"WiFiNetworkGetSSID", NULL};
     static const char *const rssiNames[] = {"WiFiNetworkGetRSSI", "WiFiNetworkGetScaledRSSI", NULL};
     static const char *const channelNames[] = {"WiFiNetworkGetChannel", NULL};
+    static const char *const propertyNames[] = {"WiFiNetworkGetProperty", NULL};
+    static const char *const bssidNames[] = {"WiFiNetworkGetBSSID", NULL};
+    static const char *const wepNames[] = {"WiFiNetworkIsWEP", NULL};
+    static const char *const wpaNames[] = {"WiFiNetworkIsWPA", NULL};
+    static const char *const wpa2Names[] = {"WiFiNetworkIsWPA2", NULL};
+    static const char *const wpa3Names[] = {"WiFiNetworkIsWPA3", NULL};
+    static const char *const eapNames[] = {"WiFiNetworkIsEAP", NULL};
+    static const char *const saeNames[] = {"WiFiNetworkIsSAE", NULL};
     static const char *const associateNames[] = {"WiFiDeviceClientAssociateAsync",
                                                  "WiFiDeviceClientAssociate", NULL};
 
@@ -99,6 +133,14 @@ static void *liush_wifistrongest_resolveSymbol(void *handle, const char *const *
     _networkSSID = (LiushWiFiStrongestSSIDFn)liush_wifistrongest_resolveSymbol(_handle, ssidNames);
     _networkRSSI = (LiushWiFiStrongestNetworkIntFn)liush_wifistrongest_resolveSymbol(_handle, rssiNames);
     _networkChannel = (LiushWiFiStrongestNetworkIntFn)liush_wifistrongest_resolveSymbol(_handle, channelNames);
+    _getProperty = (LiushWiFiStrongestGetPropertyFn)liush_wifistrongest_resolveSymbol(_handle, propertyNames);
+    _networkBSSID = (LiushWiFiStrongestSSIDFn)liush_wifistrongest_resolveSymbol(_handle, bssidNames);
+    _isWEP = (LiushWiFiStrongestNetworkBoolFn)liush_wifistrongest_resolveSymbol(_handle, wepNames);
+    _isWPA = (LiushWiFiStrongestNetworkBoolFn)liush_wifistrongest_resolveSymbol(_handle, wpaNames);
+    _isWPA2 = (LiushWiFiStrongestNetworkBoolFn)liush_wifistrongest_resolveSymbol(_handle, wpa2Names);
+    _isWPA3 = (LiushWiFiStrongestNetworkBoolFn)liush_wifistrongest_resolveSymbol(_handle, wpa3Names);
+    _isEAP = (LiushWiFiStrongestNetworkBoolFn)liush_wifistrongest_resolveSymbol(_handle, eapNames);
+    _isSAE = (LiushWiFiStrongestNetworkBoolFn)liush_wifistrongest_resolveSymbol(_handle, saeNames);
     _associate = (LiushWiFiStrongestAssociateFn)liush_wifistrongest_resolveSymbol(_handle, associateNames);
 
     if (!_create) [_missing addObject:@"WiFiManagerClientCreate"];
@@ -130,6 +172,10 @@ static void *liush_wifistrongest_resolveSymbol(void *handle, const char *const *
     [LiushWiFiStrongestLog liush_wifistrongest_log:@"私有 API 解析：%@，缺失：%@",
         (_manager ? @"可用" : @"不可用"),
         (_missing.count ? [_missing componentsJoinedByString:@", "] : @"无")];
+    [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"详情字段符号：BSSID=%@ 信道=%@ 加密=%@",
+        (_networkBSSID || _getProperty ? @"有" : @"无"),
+        (_networkChannel || _getProperty ? @"有" : @"无"),
+        (_isWPA2 || _isWPA3 || _isWPA || _isWEP ? @"有" : @"无")];
 }
 
 - (BOOL)liush_wifistrongest_available {
@@ -179,12 +225,88 @@ static void *liush_wifistrongest_resolveSymbol(void *handle, const char *const *
             if (name && CFGetTypeID(name) == CFStringGetTypeID() && CFStringGetLength(name) > 0) {
                 if (ssid) *ssid = (__bridge NSString *)name;
                 if (rssi && _networkRSSI) *rssi = _networkRSSI(network);
-                if (channel && _networkChannel) *channel = _networkChannel(network);
+                if (channel) *channel = [self liush_wifistrongest_channelFor:network];
                 return YES;
             }
         }
     }
     return [self liush_wifistrongest_readFallbackSSID:ssid rssi:rssi];
+}
+
+// 信道：先按 int 读；若返回值不在合法范围（部分系统返回的是 CFNumber 指针），再走 GetProperty("CHANNEL")。
+- (NSInteger)liush_wifistrongest_channelFor:(LiushWiFiStrongestNetworkRef)network {
+    if (_networkChannel) {
+        int value = _networkChannel(network);
+        if (value > 0 && value <= 300) return value;
+    }
+    if (_getProperty) {
+        CFTypeRef raw = _getProperty(network, CFSTR("CHANNEL"));
+        if (raw && CFGetTypeID(raw) == CFNumberGetTypeID()) {
+            int value = 0;
+            if (CFNumberGetValue((CFNumberRef)raw, kCFNumberIntType, &value) && value > 0 && value <= 300) {
+                return value;
+            }
+        }
+    }
+    return 0;
+}
+
+- (NSString *)liush_wifistrongest_bssidFor:(LiushWiFiStrongestNetworkRef)network {
+    if (_networkBSSID) {
+        CFStringRef raw = _networkBSSID(network);
+        if (raw && CFGetTypeID(raw) == CFStringGetTypeID() && CFStringGetLength(raw) > 0) {
+            return (__bridge NSString *)raw;
+        }
+    }
+    if (_getProperty) {
+        CFTypeRef raw = _getProperty(network, CFSTR("BSSID"));
+        if (raw && CFGetTypeID(raw) == CFStringGetTypeID() && CFStringGetLength((CFStringRef)raw) > 0) {
+            return (__bridge NSString *)raw;
+        }
+    }
+    return nil;
+}
+
+- (NSString *)liush_wifistrongest_securityFor:(LiushWiFiStrongestNetworkRef)network {
+    NSMutableArray<NSString *> *parts = [NSMutableArray array];
+    if (_isWPA3 && _isWPA3(network)) [parts addObject:@"WPA3"];
+    if (_isSAE && _isSAE(network)) [parts addObject:@"SAE"];
+    if (_isWPA2 && _isWPA2(network)) [parts addObject:@"WPA2"];
+    if (_isWPA && _isWPA(network)) [parts addObject:@"WPA"];
+    if (_isWEP && _isWEP(network)) [parts addObject:@"WEP"];
+    if (_isEAP && _isEAP(network)) [parts addObject:@"802.1X"];
+    if (parts.count == 0) return @"开放/未知";
+    return [parts componentsJoinedByString:@"+"];
+}
+
+- (NSString *)liush_wifistrongest_bandForChannel:(NSInteger)channel {
+    if (channel <= 0) return @"未知";
+    if (channel <= 14) return @"2.4GHz";
+    if (channel <= 196) return @"5GHz";
+    return @"5/6GHz";
+}
+
+- (NSDictionary *)liush_wifistrongest_describeNetwork:(LiushWiFiStrongestNetworkRef)network
+                                             isCurrent:(BOOL)isCurrent
+                                              fallback:(NSDictionary *)fallback {
+    NSString *ssid = fallback[@"ssid"];
+    if (ssid.length == 0) return @{};
+    NSInteger rssi = [fallback[@"rssi"] integerValue];
+    NSInteger channel = [fallback[@"channel"] integerValue];
+    NSString *bssid = [self liush_wifistrongest_bssidFor:network];
+    NSString *security = [self liush_wifistrongest_securityFor:network];
+    NSInteger pct = liush_wifistrongest_pct(rssi);
+    return @{
+        @"ssid": ssid,
+        @"bssid": bssid.length ? bssid : @"未知",
+        @"rssi": @(rssi),
+        @"pct": @(pct),
+        @"channel": @(channel),
+        @"band": [self liush_wifistrongest_bandForChannel:channel],
+        @"security": security,
+        @"is5g": @(channel > 14),
+        @"current": @(isCurrent),
+    };
 }
 
 - (NSArray<NSDictionary *> *)liush_wifistrongest_scanNetworks {
@@ -203,7 +325,7 @@ static void *liush_wifistrongest_resolveSymbol(void *handle, const char *const *
         CFStringRef name = _networkSSID(network);
         if (!name || CFGetTypeID(name) != CFStringGetTypeID() || CFStringGetLength(name) == 0) continue;
         NSInteger networkRSSI = _networkRSSI ? _networkRSSI(network) : -100;
-        NSInteger networkChannel = _networkChannel ? _networkChannel(network) : 0;
+        NSInteger networkChannel = [self liush_wifistrongest_channelFor:network];
         [result addObject:@{
             @"ssid": (__bridge NSString *)name,
             @"rssi": @(networkRSSI),
@@ -212,6 +334,64 @@ static void *liush_wifistrongest_resolveSymbol(void *handle, const char *const *
         }];
     }
     return result;
+}
+
+- (NSDictionary<NSString *, id> *)liush_wifistrongest_snapshot {
+    NSString *currentSSID = nil;
+    NSInteger currentRSSI = 0;
+    NSInteger currentChannel = 0;
+    BOOL connected = [self liush_wifistrongest_readCurrentSSID:&currentSSID
+                                                          rssi:&currentRSSI
+                                                       channel:&currentChannel];
+
+    NSMutableDictionary *current = [NSMutableDictionary dictionary];
+    if (connected) {
+        NSString *bssid = nil;
+        NSString *security = @"未知";
+        if (_manager && _device && _currentNetwork) {
+            LiushWiFiStrongestNetworkRef network = _currentNetwork(_device);
+            if (network) {
+                bssid = [self liush_wifistrongest_bssidFor:network];
+                security = [self liush_wifistrongest_securityFor:network];
+            }
+        }
+        current[@"ssid"] = currentSSID ?: @"";
+        current[@"bssid"] = bssid.length ? bssid : @"未知";
+        current[@"rssi"] = @(currentRSSI);
+        current[@"pct"] = @(liush_wifistrongest_pct(currentRSSI));
+        current[@"channel"] = @(currentChannel);
+        current[@"band"] = [self liush_wifistrongest_bandForChannel:currentChannel];
+        current[@"security"] = security;
+    }
+
+    NSMutableArray<NSDictionary *> *networks = [NSMutableArray array];
+    for (id item in _scanned) {
+        LiushWiFiStrongestNetworkRef network = (__bridge LiushWiFiStrongestNetworkRef)item;
+        CFStringRef name = _networkSSID ? _networkSSID(network) : NULL;
+        if (!name || CFGetTypeID(name) != CFStringGetTypeID() || CFStringGetLength(name) == 0) continue;
+        NSString *ssid = (__bridge NSString *)name;
+        NSInteger rssi = _networkRSSI ? _networkRSSI(network) : -100;
+        NSInteger channel = [self liush_wifistrongest_channelFor:network];
+        NSDictionary *described = [self liush_wifistrongest_describeNetwork:network
+                                                                  isCurrent:(currentSSID &&
+                                                                             [ssid isEqualToString:currentSSID])
+                                                                   fallback:@{@"ssid": ssid,
+                                                                              @"rssi": @(rssi),
+                                                                              @"channel": @(channel)}];
+        if (described.count) [networks addObject:described];
+    }
+    [networks sortUsingComparator:^NSComparisonResult(NSDictionary *left, NSDictionary *right) {
+        return [right[@"rssi"] compare:left[@"rssi"]];
+    }];
+
+    return @{
+        @"timestamp": @([[NSDate date] timeIntervalSince1970]),
+        @"available": @(self.liush_wifistrongest_available),
+        @"canScan": @([self liush_wifistrongest_canScan]),
+        @"diagnostic": self.liush_wifistrongest_diagnostic,
+        @"current": current,
+        @"networks": networks,
+    };
 }
 
 - (BOOL)liush_wifistrongest_associateToSSID:(NSString *)ssid {

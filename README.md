@@ -72,11 +72,28 @@ Windows 本机没有 Theos 工具链，不要在本机直接 `make`。
 | `prefer5G` / `prefer5GMaxDiff` | 开 / 15 | 5GHz 偏好与容忍差值 |
 | `whitelist` | 空 | 逗号分隔 SSID 白名单，空=全部 |
 | `autoJoinWhenDisconnected` | 关 | 未连接时是否自动连最强 |
-| `failCooldown` | 300 | 切换失败后该 SSID 冷却秒数 |
+| `failCooldown` | 300 | 切换失败后该 SSID 冷却秒数（最小 30） |
+| `showWeakNetworks` | 开 | 「WiFi 详情」是否列出 -85dBm 以下网络（= 取消 iOS 的 RSSI 限制） |
+
+## GoodWiFi 功能对照
+
+GoodWiFi（julioverne，闭源分发但开源在 GitHub）做的是"系统 WiFi 页信息增强"，本工程把它并入同一个插件，但**不 hook 系统的「无线局域网」页面**，而是在设置里提供「WiFi 详情」页：
+
+| GoodWiFi 功能 | 本工程 | 实现方式 |
+|---|---|---|
+| 取消 RSSI 限制 | ✅ | 快照里存原始 dBm 不做限幅；`showWeakNetworks` 开=全列，关=只列 ≥ -85dBm |
+| 显示 MAC（BSSID） | ✅ | `WiFiNetworkGetBSSID`，缺符号时回退 `WiFiNetworkGetProperty("BSSID")` |
+| 显示信道 / 频段 | ✅ | `WiFiNetworkGetChannel`，异常返回值时回退 `GetProperty("CHANNEL")`，按信道号推 2.4G/5G |
+| 显示加密方式 | ✅ | `WiFiNetworkIsWPA3/SAE/WPA2/WPA/EAP` 组合成标签 |
+| 显示信号强度 | ✅ | dBm + 百分比 + 颜色分级 |
+| 已知网络 / 查看已保存密码 | ❌ | 需要 keychain + `com.apple.private.keychain` 级权限，注入 SpringBoard 拿不到，做不到就不假装能做 |
+| 在系统 WiFi 页里内嵌显示 | ❌（有意不做） | 那是 hook Preferences 的私有 UI（`WiFiKit`/`WLAN*` 控制器），类名每个 iOS 版本都在变，没有真机可调试时等于盲写，崩溃代价远大于收益 |
+
+数据链路：SpringBoard 侧扫描 → 写 `/var/mobile/Library/Caches/com.liush.wifistrongest/snapshot.json` → 设置面板只读该文件。面板进程（Preferences）本身没有 wlan entitlement，不能自己扫描，这也是为什么详情页要"点右上角刷新"来通知 SpringBoard 扫一次。
 
 ## 已知限制（真机必读）
 
 1. **扫描能力取决于 entitlement**：`WiFiManagerClientCreate` 在缺 `com.apple.wlan.authentication` 时返回 NULL。本工程会在日志首行写明「私有 API 解析：可用/不可用 + 缺失符号」，不可用时自动降级为只读判断（不做切换）。若你的设备落在这一档，下一步是把扫描挪到带 entitlement 的进程，或改用 SpringBoard 自身的扫描方法——这是唯一需要真机迭代的点。
-2. **验证范围**：本工程通过的是骨架自检（`doctor.py`：结构、命名、引用），**未经过 Theos 编译与真机验证**，Windows 本机没有 Theos。
+2. **验证范围**：已通过 GitHub Actions（macos-15 + Theos）真实编译并产出 deb，真机已确认设置列表出现入口、图标尺寸正常。扫描是否真能用仍以日志首行「私有 API 解析：可用/不可用」为准。
 3. 只处理**跨 SSID** 切换；同一 SSID 多 AP 的漫游由系统与路由器（802.11k/v/r）负责，插件管不到。
 4. 越狱环境整体稳定性由 Dopamine 决定，插件只在 SpringBoard 内跑，不驻留守护进程、不写系统分区。

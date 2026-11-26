@@ -25,3 +25,14 @@ static inline NSString *liush_wifistrongest_preferencesPath(void) {
     return path;
 #endif
 }
+
+// SpringBoard 侧把扫描详情写到手机用户可读的缓存目录，设置面板（Preferences 进程）直接读。
+// 面板进程拿不到 wlan entitlement，所以不能自己扫描，只能读这份快照。
+static inline NSString *liush_wifistrongest_snapshotPath(void) {
+    NSString *path = @"/var/mobile/Library/Caches/com.liush.wifistrongest/snapshot.json";
+#ifdef THEOS_PACKAGE_SCHEME_ROOTHIDE
+    return jbroot(path);
+#else
+    return path;
+#endif
+}

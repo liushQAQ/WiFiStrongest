@@ -21,4 +21,9 @@
 
 // 关联到上一次扫描结果中的同名 SSID。
 - (BOOL)liush_wifistrongest_associateToSSID:(NSString *)ssid;
+
+// GoodWiFi 风格详情快照：当前连接 + 上一次扫描到的全部网络
+// （含 BSSID / 信道 / 频段 / 加密方式 / 信号百分比，RSSI 不做任何限幅）。
+// 不触发新扫描，直接复用缓存；引擎落盘给设置面板展示。
+- (NSDictionary<NSString *, id> *)liush_wifistrongest_snapshot;
 @end

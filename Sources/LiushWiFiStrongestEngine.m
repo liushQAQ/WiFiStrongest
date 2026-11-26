@@ -2,10 +2,24 @@
 #import "LiushWiFiStrongestConfig.h"
 #import "LiushWiFiStrongestLog.h"
 #import "LiushWiFiStrongestMobileWiFi.h"
+#import "LiushWiFiStrongestPaths.h"
 #import <objc/message.h>
 
 static const NSTimeInterval LiushWiFiStrongestTickInterval = 5.0;
 static const NSTimeInterval LiushWiFiStrongestPostSwitchQuiet = 20.0;
+
+// 把扫描详情落盘，供设置面板的「WiFi 详情」页读取。
+// 面板进程没有 wlan entitlement，不能自己扫描，只能读这份快照。
+static void liush_wifistrongest_writeSnapshot(NSDictionary *snapshot) {
+    if (![snapshot isKindOfClass:[NSDictionary class]]) return;
+    NSString *path = liush_wifistrongest_snapshotPath();
+    if (path.length == 0) return;
+    NSFileManager *manager = [NSFileManager defaultManager];
+    [manager createDirectoryAtPath:[path stringByDeletingLastPathComponent]
+       withIntermediateDirectories:YES attributes:nil error:NULL];
+    NSData *data = [NSJSONSerialization dataWithJSONObject:snapshot options:0 error:NULL];
+    if (data) [data writeToFile:path options:NSDataWritingAtomic error:NULL];
+}
 
 // 百分比化信号质量：-100dBm→0，-50dBm 及以上→100。
 static double liush_wifistrongest_quality(NSInteger rssi) {
@@ -129,7 +143,16 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
 
 - (void)liush_wifistrongest_evaluateForced:(BOOL)forced {
     LiushWiFiStrongestConfig *config = [LiushWiFiStrongestConfig liush_wifistrongest_shared];
-    if (![config liush_wifistrongest_isEnabled]) return;
+    if (![config liush_wifistrongest_isEnabled]) {
+        // 停用时也留一份快照，面板能明确显示「插件已停用」而不是空白。
+        LiushWiFiStrongestMobileWiFi *idle = [LiushWiFiStrongestMobileWiFi liush_wifistrongest_shared];
+        NSMutableDictionary *snapshot = [[idle liush_wifistrongest_snapshot] mutableCopy];
+        if (snapshot) {
+            snapshot[@"note"] = @"插件已停用，未执行扫描";
+            liush_wifistrongest_writeSnapshot(snapshot);
+        }
+        return;
+    }
 
     LiushWiFiStrongestMobileWiFi *wifi = [LiushWiFiStrongestMobileWiFi liush_wifistrongest_shared];
     NSString *currentSSID = nil;
@@ -168,6 +191,11 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
                 [wifi liush_wifistrongest_diagnostic]];
         }
         self.lastEvaluation = [NSDate date];
+        NSMutableDictionary *snapshot = [[wifi liush_wifistrongest_snapshot] mutableCopy];
+        if (snapshot) {
+            snapshot[@"note"] = @"无法扫描：缺少 wlan entitlement 或私有符号，以下仅为降级只读信息";
+            liush_wifistrongest_writeSnapshot(snapshot);
+        }
         return;
     }
     self.warnedNoScan = NO;
@@ -176,6 +204,7 @@ static void liush_wifistrongest_forceScanCallback(CFNotificationCenterRef center
     NSArray<NSDictionary *> *networks = [wifi liush_wifistrongest_scanNetworks];
     [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"扫描到 %lu 个网络，当前 %@ %lddBm(信道%ld)",
         (unsigned long)networks.count, (currentSSID ?: @"未连接"), (long)currentRSSI, (long)currentChannel];
+    liush_wifistrongest_writeSnapshot([wifi liush_wifistrongest_snapshot]);
 
     BOOL autoJoin = [config liush_wifistrongest_boolForKey:@"autoJoinWhenDisconnected" defaultValue:NO];
     if (!connected && !autoJoin) return;
