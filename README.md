@@ -95,5 +95,7 @@ GoodWiFi（julioverne，闭源分发但开源在 GitHub）做的是"系统 WiFi 
 
 1. **扫描能力取决于 entitlement**：`WiFiManagerClientCreate` 在缺 `com.apple.wlan.authentication` 时返回 NULL。本工程会在日志首行写明「私有 API 解析：可用/不可用 + 缺失符号」，不可用时自动降级为只读判断（不做切换）。若你的设备落在这一档，下一步是把扫描挪到带 entitlement 的进程，或改用 SpringBoard 自身的扫描方法——这是唯一需要真机迭代的点。
 2. **验证范围**：已通过 GitHub Actions（macos-15 + Theos）真实编译并产出 deb，真机已确认设置列表出现入口、图标尺寸正常。扫描是否真能用仍以日志首行「私有 API 解析：可用/不可用」为准。
-3. 只处理**跨 SSID** 切换；同一 SSID 多 AP 的漫游由系统与路由器（802.11k/v/r）负责，插件管不到。
-4. 越狱环境整体稳定性由 Dopamine 决定，插件只在 SpringBoard 内跑，不驻留守护进程、不写系统分区。
+3. **二级页必须继承 `PSViewController`**（v5.2.1 修复）：Preferences 打开详情页时会向目标控制器发送 `setSpecifier:` / `setRootController:` / `setParentController:` / `initForContentSize:`，纯 `UITableViewController` 没有这些方法，点进去会 unrecognized selector 直接闪退。表格改由本类在 `loadView` 里自建。
+4. **日志自描述**（v5.2.1）：引擎每次启动写一段「==== 自检 ====」，包含总开关、扫描能力、当前网络、全部阈值与白名单数量；每个「为什么没动作」只写一次（去重）；每 5 分钟一行心跳；手动扫描若撞上判定中会排队而不是丢弃。
+5. 只处理**跨 SSID** 切换；同一 SSID 多 AP 的漫游由系统与路由器（802.11k/v/r）负责，插件管不到。
+6. 越狱环境整体稳定性由 Dopamine 决定，插件只在 SpringBoard 内跑，不驻留守护进程、不写系统分区。
