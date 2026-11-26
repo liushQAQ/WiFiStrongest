@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>title</key><string>WiFi 择优切换</string>
+    <key>items</key>
+    <array>
+        <dict>
+            <key>cell</key><string>PSGroupCell</string>
+            <key>label</key><string>基本设置</string>
+            <key>footerText</key><string>插件在 SpringBoard 内运行，按 RSSI 在不同 SSID 之间切换；同一 SSID 的漫游仍由系统处理。</string>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSSwitchCell</string>
+            <key>label</key><string>启用插件</string>
+            <key>key</key><string>enabled</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><true/>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSSwitchCell</string>
+            <key>label</key><string>锁屏时不扫描</string>
+            <key>key</key><string>skipWhenLocked</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><true/>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSSwitchCell</string>
+            <key>label</key><string>输出详细日志</string>
+            <key>key</key><string>debugLog</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><false/>
+        </dict>
+
+        <dict>
+            <key>cell</key><string>PSGroupCell</string>
+            <key>label</key><string>扫描与阈值</string>
+            <key>footerText</key><string>信号低于「强制阈值」立即扫描；间隔到点后，仅当信号低于「区间阈值」才扫描。「最小切换差值」按信号百分比计算，0 表示只要更强就切。</string>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSEditTextCell</string>
+            <key>label</key><string>扫描间隔（秒）</string>
+            <key>key</key><string>scanInterval</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><string>20</string>
+            <key>keyboard</key><string>NumbersAndPunctuation</string>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSEditTextCell</string>
+            <key>label</key><string>强制扫描阈值（dBm）</string>
+            <key>key</key><string>forceThreshold</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><string>-80</string>
+            <key>keyboard</key><string>NumbersAndPunctuation</string>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSEditTextCell</string>
+            <key>label</key><string>区间阈值（dBm）</string>
+            <key>key</key><string>intervalThreshold</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><string>-65</string>
+            <key>keyboard</key><string>NumbersAndPunctuation</string>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSEditTextCell</string>
+            <key>label</key><string>最小切换差值（%）</string>
+            <key>key</key><string>minDelta</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><string>8</string>
+            <key>keyboard</key><string>NumbersAndPunctuation</string>
+        </dict>
+
+        <dict>
+            <key>cell</key><string>PSGroupCell</string>
+            <key>label</key><string>5GHz 偏好</string>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSSwitchCell</string>
+            <key>label</key><string>优先 5GHz</string>
+            <key>key</key><string>prefer5G</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><true/>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSEditTextCell</string>
+            <key>label</key><string>5GHz 容忍差值（%）</string>
+            <key>key</key><string>prefer5GMaxDiff</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><string>15</string>
+            <key>keyboard</key><string>NumbersAndPunctuation</string>
+        </dict>
+
+        <dict>
+            <key>cell</key><string>PSGroupCell</string>
+            <key>label</key><string>范围与容错</string>
+            <key>footerText</key><string>白名单留空表示任意扫描到的 SSID 都参与比较；建议填写自己保存过的 SSID，避免尝试未保存网络。</string>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSEditTextCell</string>
+            <key>label</key><string>白名单 SSID</string>
+            <key>key</key><string>whitelist</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><string></string>
+            <key>keyboard</key><string>Default</string>
+            <key>autoCapitalizationType</key><string>None</string>
+            <key>autoCorrectionType</key><string>None</string>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSSwitchCell</string>
+            <key>label</key><string>未连接时自动连最强</string>
+            <key>key</key><string>autoJoinWhenDisconnected</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><false/>
+        </dict>
+        <dict>
+            <key>cell</key><string>PSEditTextCell</string>
+            <key>label</key><string>失败冷却（秒）</string>
+            <key>key</key><string>failCooldown</string>
+            <key>defaults</key><string>com.axs.wifistrongest</string>
+            <key>default</key><string>300</string>
+            <key>keyboard</key><string>NumbersAndPunctuation</string>
+        </dict>
+    </array>
+</dict>
+</plist>

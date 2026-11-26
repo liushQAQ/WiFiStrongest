@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "name": "WiFiStrongest",
+  "id": "wifistrongest",
+  "display_name": "WiFi 择优切换",
+  "class_prefix": "AxsWiFiStrongest",
+  "symbol_prefix": "axs_wifistrongest",
+  "package": "com.axs.wifistrongest",
+  "bundle": "com.apple.springboard",
+  "sdk_version": "16.5",
+  "minimum_ios": "15.0",
+  "preferences": true,
+  "slider": false,
+  "github_actions": true
+}
