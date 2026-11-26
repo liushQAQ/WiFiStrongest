@@ -34,6 +34,8 @@ StrongerFi（tateu，iOS 12–14，闭源，已停更于 2019）没有公开源�
 
 ## 编译
 
+已构建产物：`dist/com.axs.wifistrongest_5.2.0-4_iphoneos-arm64.deb`，源仓库 https://github.com/liushQAQ/WiFiStrongest 。CI 用 `macos-15` runner（`macos-14` 在本账号不可用，会秒取消）。
+
 GitHub Actions（推荐，模板已配好 rootless）：
 
 ```sh
