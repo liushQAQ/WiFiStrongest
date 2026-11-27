@@ -11,7 +11,7 @@
 - (void)liush_wifistrongest_selfCheck;
 @end
 
-static const NSTimeInterval LiushWiFiStrongestTickInterval = 15.0;
+static const NSTimeInterval LiushWiFiStrongestTickInterval = 5.0;
 static const NSTimeInterval LiushWiFiStrongestPostSwitchQuiet = 20.0;
 
 // 把扫描详情落盘，供设置面板的「WiFi 详情」页读取。
@@ -76,8 +76,6 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
 @property (nonatomic, assign) BOOL pendingForced;
 @property (nonatomic, assign) NSInteger tickCount;
 @property (nonatomic, assign) NSInteger lastScanCount;
-// 连续多少轮判定没有产生切换动作，用于扫描退避。
-@property (nonatomic, assign) NSInteger noActionStreak;
 // 上一次写进日志的「为什么没动作」，用于去重，避免每 5 秒刷一行。
 @property (nonatomic, copy) NSString *lastReason;
 @end
@@ -138,12 +136,11 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
     NSInteger channel = 0;
     BOOL connected = [wifi liush_wifistrongest_readCurrentSSID:&ssid rssi:&rssi channel:&channel];
 
-    NSInteger interval = MAX((NSInteger)5, [config liush_wifistrongest_integerForKey:@"scanInterval" defaultValue:90]);
-    NSInteger forceThreshold = [config liush_wifistrongest_integerForKey:@"forceThreshold" defaultValue:-80];
-    NSInteger intervalThreshold = [config liush_wifistrongest_integerForKey:@"intervalThreshold" defaultValue:-65];
-    NSInteger minDelta = [config liush_wifistrongest_integerForKey:@"minDelta" defaultValue:8];
+    NSInteger minGap = MAX((NSInteger)5, [config liush_wifistrongest_integerForKey:@"scanInterval" defaultValue:10]);
+    NSInteger triggerThreshold = [config liush_wifistrongest_integerForKey:@"forceThreshold" defaultValue:-75];
+    NSInteger targetThreshold = [config liush_wifistrongest_integerForKey:@"intervalThreshold" defaultValue:-70];
+    NSInteger minDelta = [config liush_wifistrongest_integerForKey:@"minDelta" defaultValue:3];
     NSInteger cooldown = [config liush_wifistrongest_integerForKey:@"failCooldown" defaultValue:300];
-    BOOL strictInterval = [config liush_wifistrongest_boolForKey:@"strictInterval" defaultValue:NO];
 
     [LiushWiFiStrongestLog liush_wifistrongest_log:@"==== 自检 v%s · 进程 %@ ====",
         LIUSH_WIFISTRONGEST_VERSION, [[NSProcessInfo processInfo] processName]];
@@ -155,8 +152,8 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
         connected ? [NSString stringWithFormat:@"%@ %lddBm 信道 %ld", ssid, (long)rssi, (long)channel]
                   : @"未连接"];
     [LiushWiFiStrongestLog liush_wifistrongest_log:
-        @"参数：间隔 %lds | 严格间隔 %@ | 强制阈值 %ld | 区间阈值 %ld | 最小差值 %ld | 失败冷却 %lds | 白名单 %lu 个 | 5G偏好 %@ | 未连接自动连 %@ | 锁屏跳过 %@ | 详细日志 %@",
-        (long)interval, strictInterval ? @"开" : @"关", (long)forceThreshold, (long)intervalThreshold, (long)minDelta, (long)cooldown,
+        @"参数：触发阈值 %ld | 目标阈值 %ld | 最短扫描间隔 %lds | 最小差值 %ld | 失败冷却 %lds | 白名单 %lu 个 | 5G偏好 %@ | 未连接自动连 %@ | 锁屏跳过 %@ | 详细日志 %@",
+        (long)triggerThreshold, (long)targetThreshold, (long)minGap, (long)minDelta, (long)cooldown,
         (unsigned long)[config liush_wifistrongest_whitelist].count,
         [config liush_wifistrongest_prefer5G] ? @"开" : @"关",
         [config liush_wifistrongest_boolForKey:@"autoJoinWhenDisconnected" defaultValue:NO] ? @"开" : @"关",
@@ -169,7 +166,8 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
     } else if (!enabled) {
         [LiushWiFiStrongestLog liush_wifistrongest_log:@"结论：能力正常，但总开关关着，本轮不会扫描。"];
     } else {
-        [LiushWiFiStrongestLog liush_wifistrongest_log:@"结论：能力与开关都正常，等待节拍判定。"];
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"结论：能力与开关都正常，信号跌破 %lddBm 才扫描，目标阈值 %lddBm。",
+        (long)triggerThreshold, (long)targetThreshold];
     }
     [LiushWiFiStrongestLog liush_wifistrongest_log:@"==== 自检结束 ===="];
 }
@@ -288,29 +286,30 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
                                                        rssi:&currentRSSI
                                                     channel:&currentChannel];
 
-    NSInteger interval = MAX((NSInteger)5, [config liush_wifistrongest_integerForKey:@"scanInterval"
-                                                                     defaultValue:90]);
-    NSInteger forceThreshold = [config liush_wifistrongest_integerForKey:@"forceThreshold"
-                                                         defaultValue:-80];
-    NSInteger intervalThreshold = [config liush_wifistrongest_integerForKey:@"intervalThreshold"
-                                                            defaultValue:-65];
+    NSInteger minGap = MAX((NSInteger)5, [config liush_wifistrongest_integerForKey:@"scanInterval"
+                                                                     defaultValue:10]);
+    NSInteger triggerThreshold = [config liush_wifistrongest_integerForKey:@"forceThreshold"
+                                                          defaultValue:-75];
+    NSInteger targetThreshold = [config liush_wifistrongest_integerForKey:@"intervalThreshold"
+                                                         defaultValue:-70];
 
     if (self.lastSwitch && -[self.lastSwitch timeIntervalSinceNow] < LiushWiFiStrongestPostSwitchQuiet) {
         [self liush_wifistrongest_note:@"判定跳过：刚切换过，静默 20s 等网络稳定"];
         return;
     }
-    BOOL strictInterval = [config liush_wifistrongest_boolForKey:@"strictInterval" defaultValue:NO];
-    BOOL urgent = connected && currentRSSI < forceThreshold;
-    if (!forced && !urgent) {
-        if (!strictInterval && connected && currentRSSI > intervalThreshold) {
-            [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"信号 %lddBm 高于区间阈值，跳过扫描", (long)currentRSSI];
+    BOOL autoJoin = [config liush_wifistrongest_boolForKey:@"autoJoinWhenDisconnected" defaultValue:NO];
+    // 唯一触发条件：信号跌破触发阈值才扫；未连接时只有开了「未连接自动连」才扫。
+    BOOL needScan = connected ? (currentRSSI < triggerThreshold) : autoJoin;
+    if (!forced) {
+        if (!needScan) {
+            [LiushWiFiStrongestLog liush_wifistrongest_verbose:
+                connected ? @"信号 %lddBm 不低于触发阈值 %lddBm，不扫描"
+                         : @"未连接且未开自动连，不扫描", (long)currentRSSI, (long)triggerThreshold];
             return;
         }
-        // 无动作退避：连续 3 轮没有切换动作，间隔逐步拉长到最多 3 倍（90s->270s），省电。
-        // 「严格按间隔扫描」打开后退避与信号阈值门都失效，完全按自定义间隔执行。
-        NSInteger backoff = strictInterval ? 1 : (NSInteger)MIN(3, 1 + self.noActionStreak / 3);
+        // 防抖：两次扫描至少隔 minGap 秒，防止信号在阈值边缘抖动时连环扫描。
         if (self.lastEvaluation &&
-            -[self.lastEvaluation timeIntervalSinceNow] < (NSTimeInterval)(interval * backoff)) {
+            -[self.lastEvaluation timeIntervalSinceNow] < (NSTimeInterval)minGap) {
             return;
         }
     }
@@ -328,19 +327,17 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
     }
     NSInteger previousCount = self.lastScanCount;
     self.lastEvaluation = [NSDate date];
-    self.noActionStreak += 1;
 
     NSArray<NSDictionary *> *networks = [wifi liush_wifistrongest_scanNetworks];
     self.lastScanCount = (NSInteger)networks.count;
     self.lastReason = nil;  // 真的扫过了，允许下一次如实记录“为什么没切”
     if (forced || networks.count != previousCount) {
-        [LiushWiFiStrongestLog liush_wifistrongest_log:@"扫描：%lu 个网络 | 当前 %@ %lddBm 信道 %ld",
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"扫描：%lu 个网络 | 当前 %@ %lddBm（触发阈值 %ld，目标阈值 %ld）",
             (unsigned long)networks.count, (currentSSID ?: @"未连接"),
-            (long)currentRSSI, (long)currentChannel];
+            (long)currentRSSI, (long)triggerThreshold, (long)targetThreshold);
     }
     liush_wifistrongest_writeSnapshot([wifi liush_wifistrongest_snapshot]);
 
-    BOOL autoJoin = [config liush_wifistrongest_boolForKey:@"autoJoinWhenDisconnected" defaultValue:NO];
     if (!connected && !autoJoin) {
         [self liush_wifistrongest_note:@"判定跳过：当前没连 WiFi，且「未连接时自动连最强」是关的（详情页仍会更新）"];
         return;
@@ -348,7 +345,7 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
 
     BOOL prefer5G = [config liush_wifistrongest_prefer5G];
     NSInteger prefer5GBonus = [config liush_wifistrongest_integerForKey:@"prefer5GMaxDiff" defaultValue:15];
-    NSInteger minDelta = [config liush_wifistrongest_integerForKey:@"minDelta" defaultValue:8];
+    NSInteger minDelta = [config liush_wifistrongest_integerForKey:@"minDelta" defaultValue:3];
     NSArray<NSString *> *whitelist = [config liush_wifistrongest_whitelist];
 
     double currentScore = connected
@@ -366,6 +363,8 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
         if ([self liush_wifistrongest_cooldownActiveFor:candidateSSID]) continue;
         NSInteger candidateRSSI = [network[@"rssi"] integerValue];
         if (candidateRSSI >= 0 || candidateRSSI <= -100) continue;
+        // 只切到信号高于目标阈值的网络；弱于目标阈值的直接不考虑。
+        if (candidateRSSI < targetThreshold) continue;
         double score = liush_wifistrongest_quality(candidateRSSI)
             + ((prefer5G && [network[@"is5g"] boolValue]) ? prefer5GBonus * 0.5 : 0.0);
         if (score > bestScore) {
@@ -389,7 +388,6 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
         return;
     }
 
-    self.noActionStreak = 0;  // 要动手了，退避归零
     NSString *targetSSID = best[@"ssid"];
     [LiushWiFiStrongestLog liush_wifistrongest_log:@"切换 %@(%lddBm) → %@(%lddBm)，提升 %.1f 分",
         (currentSSID ?: @"未连接"), (long)currentRSSI, targetSSID,

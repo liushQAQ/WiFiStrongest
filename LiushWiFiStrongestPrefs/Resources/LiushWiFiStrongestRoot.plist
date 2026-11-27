@@ -86,81 +86,67 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>下面四个数字决定两件事：什么时候去扫描、扫到了要不要真的切过去。dBm 是负数，越接近 0 信号越强（-50 很强，-85 很弱）。</string>
+			<string>逻辑很简单：当前 WiFi 信号跌破「扫描触发阈值」才去扫描（平时完全不扫，不耗电）；扫到了只有信号高于「切换目标阈值」、并且确实比现在更强，才切过去。dBm 是负数，越接近 0 越强（-50 很强，-85 很弱）。</string>
 			<key>label</key>
 			<string>扫描与阈值</string>
 		</dict>
 		<dict>
 			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<false/>
-			<key>defaults</key>
-			<string>com.liush.wifistrongest</string>
-			<key>footerText</key>
-			<string>打开后完全按上面自定义的扫描间隔执行：信号再好也到点就扫，自动省电退避（间隔自动拉长 2~3 倍）也关闭。更耗电，但节奏完全听你的。</string>
-			<key>key</key>
-			<string>strictInterval</string>
-			<key>label</key>
-			<string>严格按间隔扫描</string>
-		</dict>
-		<dict>
-			<key>cell</key>
 			<string>PSEditTextCell</string>
 			<key>default</key>
-			<integer>90</integer>
+			<integer>10</integer>
 			<key>defaults</key>
 			<string>com.liush.wifistrongest</string>
 			<key>footerText</key>
-			<string>两次扫描之间至少隔这么久，自定义填多少就隔多少，最小 5 秒，默认 90 秒。注意：到点后只有当前信号低于「强制扫描阈值」才会真扫；想让到点必扫、完全按你填的时间执行，把下面的「严格按间隔扫描」打开。</string>
+			<string>防抖用：两次扫描之间最少隔这么久，自定义，最小 5 秒，默认 10 秒。它不是扫描节奏——信号好时根本不会扫，只有跌破触发阈值才扫，这里只是防止信号在阈值边缘抖动时连环扫描。</string>
 			<key>key</key>
 			<string>scanInterval</string>
 			<key>keyboard</key>
 			<string>NumbersAndPunctuation</string>
 			<key>label</key>
-			<string>扫描间隔（秒）</string>
+			<string>最短扫描间隔（秒）</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSEditTextCell</string>
 			<key>default</key>
-			<string>-80</string>
+			<string>-75</string>
 			<key>defaults</key>
 			<string>com.liush.wifistrongest</string>
 			<key>footerText</key>
-			<string>当前信号低于这个值（默认 -80，约 1 格）就不等扫描间隔，立刻扫描找更强的。怕掉线就调到 -75，想省电调到 -85。</string>
+			<string>核心开关：当前连接的 WiFi 低于这个值才扫描，默认 -75（约 2 格）。高于它完全不扫描、不耗电。想更早换网调到 -70，想更省电调到 -80。</string>
 			<key>key</key>
 			<string>forceThreshold</string>
 			<key>keyboard</key>
 			<string>NumbersAndPunctuation</string>
 			<key>label</key>
-			<string>强制扫描阈值（dBm）</string>
+			<string>扫描触发阈值（dBm）</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSEditTextCell</string>
 			<key>default</key>
-			<string>-65</string>
+			<string>-70</string>
 			<key>defaults</key>
 			<string>com.liush.wifistrongest</string>
 			<key>footerText</key>
-			<string>当前信号高于这个值（默认 -65，约 3 格）就判定"够用"，完全不扫描也不切换。调高（如 -55）更积极换网，调低（如 -75）更省电。</string>
+			<string>扫描后只把信号高于这个值的网络当候选，默认 -70（约 2~3 格）。比它弱的即使比当前强也不切——避免从一个弱网跳到另一个弱网。必须高于触发阈值。</string>
 			<key>key</key>
 			<string>intervalThreshold</string>
 			<key>keyboard</key>
 			<string>NumbersAndPunctuation</string>
 			<key>label</key>
-			<string>区间阈值（dBm）</string>
+			<string>切换目标阈值（dBm）</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSEditTextCell</string>
 			<key>default</key>
-			<string>8</string>
+			<string>3</string>
 			<key>defaults</key>
 			<string>com.liush.wifistrongest</string>
 			<key>footerText</key>
-			<string>候选网络要比当前好这么多"分"才切过去（信号百分比，-100dBm=0 分、-50dBm=100 分）。默认 8 分，防止在强弱差不多的两个网络之间来回跳。填 0 = 只要更强就切。</string>
+			<string>防抖用：候选还要比当前好这么多"分"才切（-100dBm=0 分、-50dBm=100 分）。默认 3 分，只为避免两个几乎一样强的网络来回跳；填 0 = 只要高于目标阈值且更强就切。</string>
 			<key>key</key>
 			<string>minDelta</string>
 			<key>keyboard</key>
