@@ -339,14 +339,15 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
     BOOL needScan = belowTrigger;
     if (!forced) {
         if (!needScan) {
+            // 固定文案（不带实时信号值），note 去重才生效，只在跨阈值时写一条；信号值看心跳/自检。
             [self liush_wifistrongest_note:[NSString stringWithFormat:
-                @"信号 %lddBm 不低于触发阈值 %lddBm（%@），不扫描",
-                (long)currentRSSI, (long)trigger, is5G ? @"5G" : @"2.4G"]];
+                @"当前信号不低于 %@ 触发阈值 %lddBm，不扫描",
+                is5G ? @"5G" : @"2.4G", (long)trigger]];
             return;
         }
         if (is5G && self.lowStreak5G < 2) {
-            [LiushWiFiStrongestLog liush_wifistrongest_verbose:
-                @"5G 信号 %lddBm 低于阈值，等第 %ld 针确认", (long)currentRSSI, (long)self.lowStreak5G];
+            [self liush_wifistrongest_note:
+                @"5G 信号低于触发阈值，等第 2 针确认（10 秒内）"];
             return;
         }
         // 防抖：两次扫描至少隔 minGap 秒，防止信号在阈值边缘抖动时连环扫描。
