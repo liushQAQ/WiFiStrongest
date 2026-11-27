@@ -15,6 +15,9 @@
 
 %ctor {
     @autoreleasepool {
+        // 本 dylib 同时注入 SpringBoard 与 Preferences：引擎只在 SpringBoard 里跑。
+        NSString *process = [[NSProcessInfo processInfo] processName];
+        if (![process isEqualToString:@"SpringBoard"]) return;
         // 只加载配置快照，不扫描；扫描节奏完全交给引擎定时器。
         [LiushWiFiStrongestConfig liush_wifistrongest_shared];
         // 部分重启路径不会走 applicationDidFinishLaunching，补一条兜底启动。

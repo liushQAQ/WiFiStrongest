@@ -2,147 +2,270 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>title</key><string>WiFi 择优切换</string>
-    <key>items</key>
-    <array>
-        <dict>
-            <key>cell</key><string>PSGroupCell</string>
-            <key>label</key><string>基本设置</string>
-            <key>footerText</key><string>插件在 SpringBoard 内运行，按信号强度在不同 WiFi（不同 SSID）之间切换；同一个 WiFi 名下的多个路由器之间怎么漫游，仍由 iOS 自己处理。所有开关改完立即生效，不需要注销。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSSwitchCell</string>
-            <key>label</key><string>启用插件</string>
-            <key>key</key><string>enabled</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><true/>
-            <key>footerText</key><string>总开关。关闭后引擎完全不扫描、不切换，只剩本设置面板和日志可用。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSSwitchCell</string>
-            <key>label</key><string>锁屏时不扫描</string>
-            <key>key</key><string>skipWhenLocked</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><true/>
-            <key>footerText</key><string>锁屏期间暂停扫描以省电，解锁后 5 秒内自动补扫一次。想让锁屏时也一直保持最强信号，就把它关掉（会更耗电）。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSSwitchCell</string>
-            <key>label</key><string>输出详细日志</string>
-            <key>key</key><string>debugLog</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><false/>
-            <key>footerText</key><string>每一针的判定过程都写进日志（为什么跳过、候选网络得分多少）。排障时打开，平时关掉，避免日志一直变大。</string>
-        </dict>
-
-        <dict>
-            <key>cell</key><string>PSGroupCell</string>
-            <key>label</key><string>扫描与阈值</string>
-            <key>footerText</key><string>下面四个数字决定两件事：什么时候去扫描、扫到了要不要真的切过去。dBm 是负数，越接近 0 信号越强（-50 很强，-85 很弱）。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSEditTextCell</string>
-            <key>label</key><string>扫描间隔（秒）</string>
-            <key>key</key><string>scanInterval</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><string>20</string>
-            <key>keyboard</key><string>NumbersAndPunctuation</string>
-            <key>footerText</key><string>两次扫描之间至少隔这么久，默认 20 秒，最小 5 秒。注意：到点后只有当前信号低于「区间阈值」才会真扫，信号好就继续等。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSEditTextCell</string>
-            <key>label</key><string>强制扫描阈值（dBm）</string>
-            <key>key</key><string>forceThreshold</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><string>-80</string>
-            <key>keyboard</key><string>NumbersAndPunctuation</string>
-            <key>footerText</key><string>当前信号低于这个值（默认 -80，约 1 格）就不等扫描间隔，立刻扫描找更强的。怕掉线就调到 -75，想省电调到 -85。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSEditTextCell</string>
-            <key>label</key><string>区间阈值（dBm）</string>
-            <key>key</key><string>intervalThreshold</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><string>-65</string>
-            <key>keyboard</key><string>NumbersAndPunctuation</string>
-            <key>footerText</key><string>当前信号高于这个值（默认 -65，约 3 格）就判定"够用"，完全不扫描也不切换。调高（如 -55）更积极换网，调低（如 -75）更省电。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSEditTextCell</string>
-            <key>label</key><string>最小切换差值（%）</string>
-            <key>key</key><string>minDelta</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><string>8</string>
-            <key>keyboard</key><string>NumbersAndPunctuation</string>
-            <key>footerText</key><string>候选网络要比当前好这么多"分"才切过去（信号百分比，-100dBm=0 分、-50dBm=100 分）。默认 8 分，防止在强弱差不多的两个网络之间来回跳。填 0 = 只要更强就切。</string>
-        </dict>
-
-        <dict>
-            <key>cell</key><string>PSGroupCell</string>
-            <key>label</key><string>5GHz 偏好</string>
-            <key>footerText</key><string>5GHz 速度快、干扰少但穿墙差。这里的做法是给 5GHz 网络额外加权，让它和 2.4GHz 差不多强时优先选 5GHz。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSSwitchCell</string>
-            <key>label</key><string>优先 5GHz</string>
-            <key>key</key><string>prefer5G</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><true/>
-            <key>footerText</key><string>打开后 5GHz 网络在比较时额外加分（加分值 = 下面「容忍差值」的一半）。关掉就是纯按信号强度选。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSEditTextCell</string>
-            <key>label</key><string>5GHz 容忍差值（%）</string>
-            <key>key</key><string>prefer5GMaxDiff</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><string>15</string>
-            <key>keyboard</key><string>NumbersAndPunctuation</string>
-            <key>footerText</key><string>填 15 表示 5GHz 多算 7.5 分，相当于允许 5GHz 比 2.4GHz 弱一点仍被优先选中。想更偏袒 5GHz 就调大到 20~30，想以信号为准就调小到 0。</string>
-        </dict>
-
-        <dict>
-            <key>cell</key><string>PSGroupCell</string>
-            <key>label</key><string>切换范围与失败处理</string>
-            <key>footerText</key><string>这两项解决"能切给谁"和"切不动怎么办"。默认只在你已经连着 WiFi 时做切换，不会主动从没网变有网。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSLinkCell</string>
-            <key>label</key><string>白名单 SSID（可加多个）</string>
-            <key>key</key><string>whitelist</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>footerText</key><string>点进去可加任意多个 SSID：从扫描到的网络里点选，或手动输入。留空 = 扫描到的任何网络都可参与比较（没保存过密码的会被尝试、失败后进冷却）；填了就只切到名单里的网络。建议只填自己保存过密码的。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSSwitchCell</string>
-            <key>label</key><string>未连接时自动连最强</string>
-            <key>key</key><string>autoJoinWhenDisconnected</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><false/>
-            <key>footerText</key><string>只在你当前完全没连 WiFi 时才起作用（刚开机、刚关飞行模式、被踢下线）：主动去连扫描到的最强网络。关闭时插件只做"已经有网 → 换成更好的网"，不会主动帮你从无到有连上。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSEditTextCell</string>
-            <key>label</key><string>失败冷却（秒）</string>
-            <key>key</key><string>failCooldown</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><string>300</string>
-            <key>keyboard</key><string>NumbersAndPunctuation</string>
-            <key>footerText</key><string>某个网络关联失败后，这段时间内不再尝试它。默认 300 秒（5 分钟），最小 30。失败的常见原因：没保存过密码、需要网页认证、密码被改、信号扫描时够但连接时掉、DHCP 或认证超时。设太短会反复重试导致耗电和系统弹"无法加入网络"。</string>
-        </dict>
-
-        <dict>
-            <key>cell</key><string>PSGroupCell</string>
-            <key>label</key><string>网络详情（GoodWiFi 功能）</string>
-            <key>footerText</key><string>点下面的「WiFi 详情」可看每个 AP 的 MAC（BSSID）、信道、频段、加密方式和原始 dBm，按信号从强到弱排序，点任意一行可复制。数据由 SpringBoard 侧扫描后落盘，面板只读不扫描。</string>
-        </dict>
-        <dict>
-            <key>cell</key><string>PSSwitchCell</string>
-            <key>label</key><string>显示弱信号网络（取消 RSSI 限制）</string>
-            <key>key</key><string>showWeakNetworks</string>
-            <key>defaults</key><string>com.liush.wifistrongest</string>
-            <key>default</key><true/>
-            <key>footerText</key><string>打开 = 详情页列出全部扫描结果（包括 -85dBm 以下的弱信号），RSSI 不做 iOS 默认限幅，这就是 GoodWiFi 的"取消 RSSI 限制"。关闭则只列 -85dBm 以上的网络。</string>
-        </dict>
-    </array>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>插件在 SpringBoard 内运行，按信号强度在不同 WiFi（不同 SSID）之间切换；同一个 WiFi 名下的多个路由器之间怎么漫游，仍由 iOS 自己处理。所有开关改完立即生效，不需要注销。</string>
+			<key>label</key>
+			<string>基本设置</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>总开关。关闭后引擎完全不扫描、不切换，只剩本设置面板和日志可用。</string>
+			<key>key</key>
+			<string>enabled</string>
+			<key>label</key>
+			<string>启用插件</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>在系统「无线局域网」页每个网络名后面追加 -xxdBm·频段。数据来自插件最近一次扫描快照，进入该页时会自动触发一次扫描。</string>
+			<key>key</key>
+			<string>pageEnhance</string>
+			<key>label</key>
+			<string>WiFi 页显示信号</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>在信号后再追加完整 BSSID（路由器 MAC）。行宽有限，过长会被系统截断，可关闭此项只看信号。</string>
+			<key>key</key>
+			<string>pageShowMAC</string>
+			<key>label</key>
+			<string>WiFi 页显示 MAC</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>锁屏期间暂停扫描以省电，解锁后 5 秒内自动补扫一次。想让锁屏时也一直保持最强信号，就把它关掉（会更耗电）。</string>
+			<key>key</key>
+			<string>skipWhenLocked</string>
+			<key>label</key>
+			<string>锁屏时不扫描</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>每一针的判定过程都写进日志（为什么跳过、候选网络得分多少）。排障时打开，平时关掉，避免日志一直变大。</string>
+			<key>key</key>
+			<string>debugLog</string>
+			<key>label</key>
+			<string>输出详细日志</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>下面四个数字决定两件事：什么时候去扫描、扫到了要不要真的切过去。dBm 是负数，越接近 0 信号越强（-50 很强，-85 很弱）。</string>
+			<key>label</key>
+			<string>扫描与阈值</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string>20</string>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>两次扫描之间至少隔这么久，默认 20 秒，最小 5 秒。注意：到点后只有当前信号低于「区间阈值」才会真扫，信号好就继续等。</string>
+			<key>key</key>
+			<string>scanInterval</string>
+			<key>keyboard</key>
+			<string>NumbersAndPunctuation</string>
+			<key>label</key>
+			<string>扫描间隔（秒）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string>-80</string>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>当前信号低于这个值（默认 -80，约 1 格）就不等扫描间隔，立刻扫描找更强的。怕掉线就调到 -75，想省电调到 -85。</string>
+			<key>key</key>
+			<string>forceThreshold</string>
+			<key>keyboard</key>
+			<string>NumbersAndPunctuation</string>
+			<key>label</key>
+			<string>强制扫描阈值（dBm）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string>-65</string>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>当前信号高于这个值（默认 -65，约 3 格）就判定"够用"，完全不扫描也不切换。调高（如 -55）更积极换网，调低（如 -75）更省电。</string>
+			<key>key</key>
+			<string>intervalThreshold</string>
+			<key>keyboard</key>
+			<string>NumbersAndPunctuation</string>
+			<key>label</key>
+			<string>区间阈值（dBm）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string>8</string>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>候选网络要比当前好这么多"分"才切过去（信号百分比，-100dBm=0 分、-50dBm=100 分）。默认 8 分，防止在强弱差不多的两个网络之间来回跳。填 0 = 只要更强就切。</string>
+			<key>key</key>
+			<string>minDelta</string>
+			<key>keyboard</key>
+			<string>NumbersAndPunctuation</string>
+			<key>label</key>
+			<string>最小切换差值（%）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>5GHz 速度快、干扰少但穿墙差。这里的做法是给 5GHz 网络额外加权，让它和 2.4GHz 差不多强时优先选 5GHz。</string>
+			<key>label</key>
+			<string>5GHz 偏好</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>打开后 5GHz 网络在比较时额外加分（加分值 = 下面「容忍差值」的一半）。关掉就是纯按信号强度选。</string>
+			<key>key</key>
+			<string>prefer5G</string>
+			<key>label</key>
+			<string>优先 5GHz</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string>15</string>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>填 15 表示 5GHz 多算 7.5 分，相当于允许 5GHz 比 2.4GHz 弱一点仍被优先选中。想更偏袒 5GHz 就调大到 20~30，想以信号为准就调小到 0。</string>
+			<key>key</key>
+			<string>prefer5GMaxDiff</string>
+			<key>keyboard</key>
+			<string>NumbersAndPunctuation</string>
+			<key>label</key>
+			<string>5GHz 容忍差值（%）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>这两项解决"能切给谁"和"切不动怎么办"。默认只在你已经连着 WiFi 时做切换，不会主动从没网变有网。</string>
+			<key>label</key>
+			<string>切换范围与失败处理</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>点进去可加任意多个 SSID：从扫描到的网络里点选，或手动输入。留空 = 扫描到的任何网络都可参与比较（没保存过密码的会被尝试、失败后进冷却）；填了就只切到名单里的网络。建议只填自己保存过密码的。</string>
+			<key>key</key>
+			<string>whitelist</string>
+			<key>label</key>
+			<string>白名单 SSID（可加多个）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>只在你当前完全没连 WiFi 时才起作用（刚开机、刚关飞行模式、被踢下线）：主动去连扫描到的最强网络。关闭时插件只做"已经有网 → 换成更好的网"，不会主动帮你从无到有连上。</string>
+			<key>key</key>
+			<string>autoJoinWhenDisconnected</string>
+			<key>label</key>
+			<string>未连接时自动连最强</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string>300</string>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>某个网络关联失败后，这段时间内不再尝试它。默认 300 秒（5 分钟），最小 30。失败的常见原因：没保存过密码、需要网页认证、密码被改、信号扫描时够但连接时掉、DHCP 或认证超时。设太短会反复重试导致耗电和系统弹"无法加入网络"。</string>
+			<key>key</key>
+			<string>failCooldown</string>
+			<key>keyboard</key>
+			<string>NumbersAndPunctuation</string>
+			<key>label</key>
+			<string>失败冷却（秒）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>点下面的「WiFi 详情」可看每个 AP 的 MAC（BSSID）、信道、频段、加密方式和原始 dBm，按信号从强到弱排序，点任意一行可复制。数据由 SpringBoard 侧扫描后落盘，面板只读不扫描。</string>
+			<key>label</key>
+			<string>网络详情（GoodWiFi 功能）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>打开 = 详情页列出全部扫描结果（包括 -85dBm 以下的弱信号），RSSI 不做 iOS 默认限幅，这就是 GoodWiFi 的"取消 RSSI 限制"。关闭则只列 -85dBm 以上的网络。</string>
+			<key>key</key>
+			<string>showWeakNetworks</string>
+			<key>label</key>
+			<string>显示弱信号网络（取消 RSSI 限制）</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>WiFi 择优切换</string>
 </dict>
 </plist>
