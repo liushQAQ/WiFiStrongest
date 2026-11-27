@@ -2,7 +2,6 @@
 #import "LiushWiFiStrongestPreferences.h"
 #import "LiushWiFiStrongestConfig.h"
 #import "LiushWiFiStrongestLog.h"
-#import "LiushWiFiStrongestDetailController.h"
 #import "LiushWiFiStrongestWhitelistController.h"
 #import <Preferences/PSSpecifier.h>
 #import <UIKit/UIKit.h>
@@ -35,15 +34,6 @@
             self.whitelistSpecifier = link;
             break;
         }
-        // 紧跟 plist 末尾的「网络详情」分组（该组最后一项是「显示弱信号网络」开关）。
-        PSSpecifier *detailLink = [PSSpecifier preferenceSpecifierNamed:@"WiFi 详情：信号 / 信道 / MAC"
-                                                                target:self
-                                                                   set:nil
-                                                                   get:nil
-                                                                detail:[LiushWiFiStrongestDetailController class]
-                                                                  cell:PSLinkCell
-                                                                  edit:nil];
-        [items addObject:detailLink];
         [items addObject:[PSSpecifier preferenceSpecifierNamed:@"诊断" target:self
                      set:nil get:nil detail:nil cell:PSGroupCell edit:nil]];
         [self liush_wifistrongest_addButton:@"运行自检（写日志）" action:@selector(liush_wifistrongest_selfCheck:) to:items];

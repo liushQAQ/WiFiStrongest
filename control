@@ -1,6 +1,6 @@
 Package: com.liush.wifistrongest
 Name: WiFi 择优切换
-Version: 5.2.9
+Version: 5.3.0
 Architecture: iphoneos-arm
 Description: 自动切换到信号更强的已知 WiFi（rootless）
 Maintainer: Liush

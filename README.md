@@ -73,7 +73,6 @@ Windows 本机没有 Theos 工具链，不要在本机直接 `make`。
 | `whitelist` | 空 | 逗号分隔 SSID 白名单，空=全部 |
 | `autoJoinWhenDisconnected` | 关 | 未连接时是否自动连最强 |
 | `failCooldown` | 300 | 切换失败后该 SSID 冷却秒数（最小 30） |
-| `showWeakNetworks` | 开 | 「WiFi 详情」是否列出 -85dBm 以下网络（= 取消 iOS 的 RSSI 限制） |
 
 ## GoodWiFi 功能对照
 
@@ -81,7 +80,7 @@ GoodWiFi（julioverne，闭源分发但开源在 GitHub）做的是"系统 WiFi 
 
 | GoodWiFi 功能 | 本工程 | 实现方式 |
 |---|---|---|
-| 取消 RSSI 限制 | ✅ | 快照里存原始 dBm 不做限幅；`showWeakNetworks` 开=全列，关=只列 ≥ -85dBm |
+| 取消 RSSI 限制 | ➖ | v5.3.0 起 GoodWiFi 详情功能移交原插件，本插件不再提供 |
 | 显示 MAC（BSSID） | ✅ | `WiFiNetworkGetBSSID`，缺符号时回退 `WiFiNetworkGetProperty("BSSID")` |
 | 显示信道 / 频段 | ✅ | `WiFiNetworkGetChannel`，异常返回值时回退 `GetProperty("CHANNEL")`，按信道号推 2.4G/5G |
 | 显示加密方式 | ✅ | `WiFiNetworkIsWPA3/SAE/WPA2/WPA/EAP` 组合成标签 |

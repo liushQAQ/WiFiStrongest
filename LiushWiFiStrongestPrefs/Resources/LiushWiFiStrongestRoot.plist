@@ -34,34 +34,6 @@
 			<key>defaults</key>
 			<string>com.liush.wifistrongest</string>
 			<key>footerText</key>
-			<string>在系统「无线局域网」页每个网络名后面追加 -xxdBm·频段。数据来自插件最近一次扫描快照，进入该页时会自动触发一次扫描。</string>
-			<key>key</key>
-			<string>pageEnhance</string>
-			<key>label</key>
-			<string>WiFi 页显示信号</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<true/>
-			<key>defaults</key>
-			<string>com.liush.wifistrongest</string>
-			<key>footerText</key>
-			<string>在信号后再追加完整 BSSID（路由器 MAC）。行宽有限，过长会被系统截断，可关闭此项只看信号。</string>
-			<key>key</key>
-			<string>pageShowMAC</string>
-			<key>label</key>
-			<string>WiFi 页显示 MAC</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<true/>
-			<key>defaults</key>
-			<string>com.liush.wifistrongest</string>
-			<key>footerText</key>
 			<string>锁屏期间暂停扫描以省电，解锁后 5 秒内自动补扫一次。想让锁屏时也一直保持最强信号，就把它关掉（会更耗电）。</string>
 			<key>key</key>
 			<string>skipWhenLocked</string>
@@ -257,28 +229,6 @@
 			<string>NumbersAndPunctuation</string>
 			<key>label</key>
 			<string>失败冷却（秒）</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>footerText</key>
-			<string>点下面的「WiFi 详情」可看每个 AP 的 MAC（BSSID）、信道、频段、加密方式和原始 dBm，按信号从强到弱排序，点任意一行可复制。数据由 SpringBoard 侧扫描后落盘，面板只读不扫描。</string>
-			<key>label</key>
-			<string>网络详情（GoodWiFi 功能）</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<true/>
-			<key>defaults</key>
-			<string>com.liush.wifistrongest</string>
-			<key>footerText</key>
-			<string>打开 = 详情页列出全部扫描结果（包括 -85dBm 以下的弱信号），RSSI 不做 iOS 默认限幅，这就是 GoodWiFi 的"取消 RSSI 限制"。关闭则只列 -85dBm 以上的网络。</string>
-			<key>key</key>
-			<string>showWeakNetworks</string>
-			<key>label</key>
-			<string>显示弱信号网络（取消 RSSI 限制）</string>
 		</dict>
 	</array>
 	<key>title</key>
