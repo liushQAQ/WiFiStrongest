@@ -378,7 +378,13 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
     NSInteger previousCount = self.lastScanCount;
     self.lastEvaluation = [NSDate date];
 
-    NSArray<NSDictionary *> *networks = [wifi liush_wifistrongest_scanNetworks];
+    NSArray<NSDictionary *> *networks = nil;
+    @try {
+        networks = [wifi liush_wifistrongest_scanNetworks];
+    } @catch (NSException *exception) {
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"扫描阶段异常：%@", exception];
+        networks = @[];
+    }
     self.lastScanCount = (NSInteger)networks.count;
     self.lastReason = nil;  // 真的扫过了，允许下一次如实记录“为什么没切”
     if (forced || networks.count != previousCount) {
@@ -439,7 +445,13 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
     [LiushWiFiStrongestLog liush_wifistrongest_log:@"切换 %@(%lddBm) → %@(%lddBm)，提升 %.1f 分",
         (currentSSID ?: @"未连接"), (long)currentRSSI, targetSSID,
         (long)[best[@"rssi"] integerValue], improvement];
-    if ([wifi liush_wifistrongest_associateToSSID:targetSSID]) {
+    BOOL joined = NO;
+    @try {
+        joined = [wifi liush_wifistrongest_associateToSSID:targetSSID];
+    } @catch (NSException *exception) {
+        [LiushWiFiStrongestLog liush_wifistrongest_log:@"切换阶段异常：%@", exception];
+    }
+    if (joined) {
         self.lastSwitch = [NSDate date];
         self.unconnectedAttempts = 0;
         [LiushWiFiStrongestLog liush_wifistrongest_log:@"切换成功：%@", targetSSID];

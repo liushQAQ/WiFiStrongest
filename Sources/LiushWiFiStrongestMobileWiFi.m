@@ -339,8 +339,11 @@ static void liush_wifistrongest_scanCallback(LiushWiFiStrongestDeviceRef device,
     dispatch_semaphore_t sem = (__bridge dispatch_semaphore_t)token;
     NSMutableArray *live = [NSMutableArray array];
     if (results) {
-        // CFBridgingRelease：回调给的数组遵循 Get 规则，直接移交 ARC 持有。
-        NSArray *bridged = CFBridgingRelease(results);
+        // v5.3.3 关键修复：这里只「借用」不释放。此前 CFBridgingRelease(results) 把回调
+        // 数组直接移交 ARC；若系统回调遵循 Get 规则（数组不属于我们），就是过度释放——
+        // 数组在数秒后被提前析构，解析/评分阶段随机崩溃进安全模式（5.3.0/5.3.2 两次实证）。
+        // 改为 __bridge 借用 + 拷贝内容到自己的数组：即便系统是 Create 规则也只漏一小块，绝不崩。
+        NSArray *bridged = (__bridge NSArray *)results;
         if ([bridged isKindOfClass:[NSArray class]]) [live addObjectsFromArray:bridged];
     }
     @synchronized([LiushWiFiStrongestMobileWiFi class]) {
@@ -352,6 +355,7 @@ static void liush_wifistrongest_scanCallback(LiushWiFiStrongestDeviceRef device,
 - (BOOL)liush_wifistrongest_triggerScan {
     if (_scanAsync) {
         dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+        [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"阶段：下发 ScanAsync"];
         _scanAsync(_device, (__bridge CFDictionaryRef)@{},
                    liush_wifistrongest_scanCallback, (__bridge void *)sem);
         long waited = dispatch_semaphore_wait(sem,
@@ -360,6 +364,7 @@ static void liush_wifistrongest_scanCallback(LiushWiFiStrongestDeviceRef device,
             [LiushWiFiStrongestLog liush_wifistrongest_log:@"主动扫描等回调超时(6s)，改用已知网络缓存"];
             return NO;
         }
+        [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"阶段：ScanAsync 回调返回"];
         return YES;
     }
     if (_scan) {
