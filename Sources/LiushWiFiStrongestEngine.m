@@ -313,7 +313,15 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
         return;
     }
     BOOL autoJoin = [config liush_wifistrongest_boolForKey:@"autoJoinWhenDisconnected" defaultValue:NO];
-    if (connected) self.unconnectedAttempts = 0;  // 连上了就恢复额度
+    (void)autoJoin;  // 未连接一律不扫，开关暂时无效（防崩溃）
+    // v5.3.0 实证：未连接状态下执行扫描会让 SpringBoard 崩进安全模式。
+    // v5.3.1 起：未连接一律不扫——手动扫描和自动连都拦住，从根上避开这条路径。
+    if (!connected) {
+        [self liush_wifistrongest_note:
+            @"未连接 WiFi，不扫描（含手动扫描）：此状态下扫描会触发 SpringBoard 安全模式"];
+        return;
+    }
+    self.unconnectedAttempts = 0;  // 连上了就恢复额度
     // 触发阈值按当前连接网络的频段取；5G 读数抖，连续 2 针都低于才真扫。
     BOOL is5G = connected && currentChannel > 14;
     NSInteger trigger = is5G ? trigger5G : triggerThreshold;
@@ -328,13 +336,12 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
         self.lowStreak5G = 0;
     }
     // 唯一触发条件：当前信号跌破对应频段的触发阈值；未连接时只有开了自动连才扫。
-    BOOL needScan = connected ? belowTrigger : autoJoin;
+    BOOL needScan = belowTrigger;
     if (!forced) {
         if (!needScan) {
-            [LiushWiFiStrongestLog liush_wifistrongest_verbose:
-                connected ? @"信号 %lddBm 不低于触发阈值 %lddBm（%@），不扫描"
-                          : @"未连接且未开自动连，不扫描",
-                (long)currentRSSI, (long)trigger, is5G ? @"5G" : @"2.4G"];
+            [self liush_wifistrongest_note:[NSString stringWithFormat:
+                @"信号 %lddBm 不低于触发阈值 %lddBm（%@），不扫描",
+                (long)currentRSSI, (long)trigger, is5G ? @"5G" : @"2.4G"]];
             return;
         }
         if (is5G && self.lowStreak5G < 2) {
@@ -381,11 +388,6 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
             (long)(connected ? (currentChannel > 14 ? trigger5G : triggerThreshold) : 0)];
     }
     liush_wifistrongest_writeSnapshot([wifi liush_wifistrongest_snapshot]);
-
-    if (!connected && !autoJoin) {
-        [self liush_wifistrongest_note:@"判定跳过：当前没连 WiFi，且「未连接时自动连最强」是关的（详情页仍会更新）"];
-        return;
-    }
 
     BOOL prefer5G = [config liush_wifistrongest_prefer5G];
     NSInteger prefer5GBonus = [config liush_wifistrongest_integerForKey:@"prefer5GMaxDiff" defaultValue:15];

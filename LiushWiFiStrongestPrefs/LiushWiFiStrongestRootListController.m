@@ -115,7 +115,7 @@
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
         (__bridge CFStringRef)LiushWiFiStrongestForceScanNotification, NULL, NULL, true);
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"已发出扫描请求"
-        message:@"SpringBoard 收到请求后会立刻评估一次，结果写入运行日志。"
+        message:@"SpringBoard 收到后评估一次；未连接 WiFi 时插件会跳过扫描（此状态下扫描会触发安全模式），结果写入运行日志。"
         preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"知道了" style:UIAlertActionStyleDefault handler:nil]];
     [self presentViewController:alert animated:YES completion:nil];

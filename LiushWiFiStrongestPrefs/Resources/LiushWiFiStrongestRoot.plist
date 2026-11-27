@@ -208,7 +208,7 @@
 			<key>defaults</key>
 			<string>com.liush.wifistrongest</string>
 			<key>footerText</key>
-			<string>只在你当前完全没连 WiFi 时才起作用（刚开机、刚关飞行模式、被踢下线）：主动去连扫描到的最强网络。为省电，一轮解锁最多尝试 3 次，3 次没连上就暂停，解锁后重置再来；关闭时插件只做"已经有网 → 换成更好的网"。</string>
+			<string>⚠️ 因未连接状态下扫描会让 SpringBoard 崩进安全模式，本开关自 v5.3.1 起暂时无效：插件在未连接 WiFi 时一律不扫描（手动扫描也会被拦住）。已连接的 WiFi 信号弱时自动切换不受影响。</string>
 			<key>key</key>
 			<string>autoJoinWhenDisconnected</string>
 			<key>label</key>
