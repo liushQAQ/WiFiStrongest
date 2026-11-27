@@ -11,20 +11,33 @@
 - (void)liush_wifistrongest_selfCheck;
 @end
 
-static const NSTimeInterval LiushWiFiStrongestTickInterval = 5.0;
+static const NSTimeInterval LiushWiFiStrongestTickInterval = 15.0;
 static const NSTimeInterval LiushWiFiStrongestPostSwitchQuiet = 20.0;
 
 // 把扫描详情落盘，供设置面板的「WiFi 详情」页读取。
 // 面板进程没有 wlan entitlement，不能自己扫描，只能读这份快照。
 static void liush_wifistrongest_writeSnapshot(NSDictionary *snapshot) {
     if (![snapshot isKindOfClass:[NSDictionary class]]) return;
+    // 省内存省磁盘：只保留信号最强的 80 个网络；内容没变化就不写盘。
+    NSMutableDictionary *trimmed = [snapshot mutableCopy];
+    NSArray *networks = trimmed[@"networks"];
+    if ([networks isKindOfClass:[NSArray class]] && networks.count > 80) {
+        trimmed[@"networks"] = [networks subarrayWithRange:NSMakeRange(0, 80)];
+        trimmed[@"truncated"] = @YES;
+    }
+    [trimmed removeObjectForKey:@"timestamp"];  // 时间戳会让去重永远失效，剔除后再比对
     NSString *path = liush_wifistrongest_snapshotPath();
     if (path.length == 0) return;
     NSFileManager *manager = [NSFileManager defaultManager];
     [manager createDirectoryAtPath:[path stringByDeletingLastPathComponent]
        withIntermediateDirectories:YES attributes:nil error:NULL];
-    NSData *data = [NSJSONSerialization dataWithJSONObject:snapshot options:0 error:NULL];
-    if (data) [data writeToFile:path options:NSDataWritingAtomic error:NULL];
+    NSData *data = [NSJSONSerialization dataWithJSONObject:trimmed options:0 error:NULL];
+    if (!data) return;
+    static NSString *lastJSON;
+    NSString *json = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    if (json && lastJSON && [json isEqualToString:lastJSON]) return;
+    lastJSON = json;
+    [data writeToFile:path options:NSDataWritingAtomic error:NULL];
 }
 
 // 百分比化信号质量：-100dBm→0，-50dBm 及以上→100。
@@ -63,6 +76,8 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
 @property (nonatomic, assign) BOOL pendingForced;
 @property (nonatomic, assign) NSInteger tickCount;
 @property (nonatomic, assign) NSInteger lastScanCount;
+// 连续多少轮判定没有产生切换动作，用于扫描退避。
+@property (nonatomic, assign) NSInteger noActionStreak;
 // 上一次写进日志的「为什么没动作」，用于去重，避免每 5 秒刷一行。
 @property (nonatomic, copy) NSString *lastReason;
 @end
@@ -123,7 +138,7 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
     NSInteger channel = 0;
     BOOL connected = [wifi liush_wifistrongest_readCurrentSSID:&ssid rssi:&rssi channel:&channel];
 
-    NSInteger interval = MAX((NSInteger)5, [config liush_wifistrongest_integerForKey:@"scanInterval" defaultValue:20]);
+    NSInteger interval = MAX((NSInteger)5, [config liush_wifistrongest_integerForKey:@"scanInterval" defaultValue:90]);
     NSInteger forceThreshold = [config liush_wifistrongest_integerForKey:@"forceThreshold" defaultValue:-80];
     NSInteger intervalThreshold = [config liush_wifistrongest_integerForKey:@"intervalThreshold" defaultValue:-65];
     NSInteger minDelta = [config liush_wifistrongest_integerForKey:@"minDelta" defaultValue:8];
@@ -273,7 +288,7 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
                                                     channel:&currentChannel];
 
     NSInteger interval = MAX((NSInteger)5, [config liush_wifistrongest_integerForKey:@"scanInterval"
-                                                                     defaultValue:20]);
+                                                                     defaultValue:90]);
     NSInteger forceThreshold = [config liush_wifistrongest_integerForKey:@"forceThreshold"
                                                          defaultValue:-80];
     NSInteger intervalThreshold = [config liush_wifistrongest_integerForKey:@"intervalThreshold"
@@ -289,8 +304,10 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
             [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"信号 %lddBm 高于区间阈值，跳过扫描", (long)currentRSSI];
             return;
         }
+        // 无动作退避：连续 3 轮没有切换动作，间隔逐步拉长到最多 3 倍（90s->270s），省电。
+        NSInteger backoff = (NSInteger)MIN(3, 1 + self.noActionStreak / 3);
         if (self.lastEvaluation &&
-            -[self.lastEvaluation timeIntervalSinceNow] < (NSTimeInterval)interval) {
+            -[self.lastEvaluation timeIntervalSinceNow] < (NSTimeInterval)(interval * backoff)) {
             return;
         }
     }
@@ -308,6 +325,7 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
     }
     NSInteger previousCount = self.lastScanCount;
     self.lastEvaluation = [NSDate date];
+    self.noActionStreak += 1;
 
     NSArray<NSDictionary *> *networks = [wifi liush_wifistrongest_scanNetworks];
     self.lastScanCount = (NSInteger)networks.count;
@@ -368,6 +386,7 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
         return;
     }
 
+    self.noActionStreak = 0;  // 要动手了，退避归零
     NSString *targetSSID = best[@"ssid"];
     [LiushWiFiStrongestLog liush_wifistrongest_log:@"切换 %@(%lddBm) → %@(%lddBm)，提升 %.1f 分",
         (currentSSID ?: @"未连接"), (long)currentRSSI, targetSSID,

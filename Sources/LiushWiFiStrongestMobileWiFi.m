@@ -355,9 +355,9 @@ static void liush_wifistrongest_scanCallback(LiushWiFiStrongestDeviceRef device,
         _scanAsync(_device, (__bridge CFDictionaryRef)@{},
                    liush_wifistrongest_scanCallback, (__bridge void *)sem);
         long waited = dispatch_semaphore_wait(sem,
-            dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)));
+            dispatch_time(DISPATCH_TIME_NOW, (int64_t)(6 * NSEC_PER_SEC)));
         if (waited != 0) {
-            [LiushWiFiStrongestLog liush_wifistrongest_log:@"主动扫描等回调超时(10s)，改用已知网络缓存"];
+            [LiushWiFiStrongestLog liush_wifistrongest_log:@"主动扫描等回调超时(6s)，改用已知网络缓存"];
             return NO;
         }
         return YES;
