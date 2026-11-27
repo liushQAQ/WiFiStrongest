@@ -14,6 +14,11 @@ typedef LiushWiFiStrongestDeviceRef (*LiushWiFiStrongestGetDeviceFn)(LiushWiFiSt
 typedef CFArrayRef (*LiushWiFiStrongestCopyDevicesFn)(LiushWiFiStrongestManagerRef);
 typedef int (*LiushWiFiStrongestScanFn)(LiushWiFiStrongestManagerRef);
 typedef CFArrayRef (*LiushWiFiStrongestCopyNetworksFn)(LiushWiFiStrongestManagerRef);
+typedef CFArrayRef (*LiushWiFiStrongestCopyAvailableFn)(LiushWiFiStrongestDeviceRef);
+typedef void (*LiushWiFiStrongestScanCallback)(LiushWiFiStrongestDeviceRef, CFArrayRef, CFErrorRef, void *);
+typedef void (*LiushWiFiStrongestScanAsyncFn)(LiushWiFiStrongestDeviceRef, CFDictionaryRef,
+                                             LiushWiFiStrongestScanCallback, void *);
+typedef void (*LiushWiFiStrongestScheduleFn)(LiushWiFiStrongestManagerRef, CFRunLoopRef, CFStringRef);
 typedef LiushWiFiStrongestNetworkRef (*LiushWiFiStrongestCurrentNetworkFn)(LiushWiFiStrongestDeviceRef);
 typedef CFStringRef (*LiushWiFiStrongestSSIDFn)(LiushWiFiStrongestNetworkRef);
 typedef int (*LiushWiFiStrongestNetworkIntFn)(LiushWiFiStrongestNetworkRef);
@@ -57,6 +62,9 @@ static NSInteger liush_wifistrongest_pct(NSInteger rssi) {
     LiushWiFiStrongestGetDeviceFn _getDevice;
     LiushWiFiStrongestCopyDevicesFn _copyDevices;
     LiushWiFiStrongestScanFn _scan;
+    LiushWiFiStrongestScanAsyncFn _scanAsync;
+    LiushWiFiStrongestCopyAvailableFn _copyAvailable;
+    LiushWiFiStrongestScheduleFn _schedule;
     LiushWiFiStrongestCopyNetworksFn _copyNetworks;
     LiushWiFiStrongestCurrentNetworkFn _currentNetwork;
     LiushWiFiStrongestSSIDFn _networkSSID;
@@ -107,6 +115,10 @@ static NSInteger liush_wifistrongest_pct(NSInteger rssi) {
     static const char *const getDeviceNames[] = {"WiFiManagerClientGetDevice", NULL};
     static const char *const copyDevicesNames[] = {"WiFiManagerClientCopyDevices", NULL};
     static const char *const scanNames[] = {"WiFiManagerClientScanNetworks", "WiFiManagerClientScan", NULL};
+    static const char *const scanAsyncNames[] = {"WiFiDeviceClientScanAsync", NULL};
+    static const char *const copyAvailableNames[] = {"WiFiDeviceClientCopyAvailableNetworks",
+                                                     "WiFiDeviceClientCopyAvailableNetworksSync", NULL};
+    static const char *const scheduleNames[] = {"WiFiManagerClientScheduleWithRunLoop", NULL};
     static const char *const copyNetworksNames[] = {"WiFiManagerClientCopyNetworks",
                                                     "WiFiManagerClientGetNetworks", NULL};
     static const char *const currentNames[] = {"WiFiDeviceClientCopyCurrentNetwork", NULL};
@@ -128,6 +140,9 @@ static NSInteger liush_wifistrongest_pct(NSInteger rssi) {
     _getDevice = (LiushWiFiStrongestGetDeviceFn)liush_wifistrongest_resolveSymbol(_handle, getDeviceNames);
     _copyDevices = (LiushWiFiStrongestCopyDevicesFn)liush_wifistrongest_resolveSymbol(_handle, copyDevicesNames);
     _scan = (LiushWiFiStrongestScanFn)liush_wifistrongest_resolveSymbol(_handle, scanNames);
+    _scanAsync = (LiushWiFiStrongestScanAsyncFn)liush_wifistrongest_resolveSymbol(_handle, scanAsyncNames);
+    _copyAvailable = (LiushWiFiStrongestCopyAvailableFn)liush_wifistrongest_resolveSymbol(_handle, copyAvailableNames);
+    _schedule = (LiushWiFiStrongestScheduleFn)liush_wifistrongest_resolveSymbol(_handle, scheduleNames);
     _copyNetworks = (LiushWiFiStrongestCopyNetworksFn)liush_wifistrongest_resolveSymbol(_handle, copyNetworksNames);
     _currentNetwork = (LiushWiFiStrongestCurrentNetworkFn)liush_wifistrongest_resolveSymbol(_handle, currentNames);
     _networkSSID = (LiushWiFiStrongestSSIDFn)liush_wifistrongest_resolveSymbol(_handle, ssidNames);
@@ -144,8 +159,8 @@ static NSInteger liush_wifistrongest_pct(NSInteger rssi) {
     _associate = (LiushWiFiStrongestAssociateFn)liush_wifistrongest_resolveSymbol(_handle, associateNames);
 
     if (!_create) [_missing addObject:@"WiFiManagerClientCreate"];
-    if (!_scan) [_missing addObject:@"WiFiManagerClientScanNetworks"];
-    if (!_copyNetworks) [_missing addObject:@"WiFiManagerClientCopyNetworks"];
+    if (!_scanAsync && !_scan) [_missing addObject:@"扫描触发(ScanAsync/ScanNetworks)"];
+    if (!_copyAvailable && !_copyNetworks) [_missing addObject:@"结果读取(CopyAvailableNetworks)"];
     if (!_currentNetwork) [_missing addObject:@"WiFiDeviceClientCopyCurrentNetwork"];
     if (!_networkSSID) [_missing addObject:@"WiFiNetworkGetSSID"];
     if (!_networkRSSI) [_missing addObject:@"WiFiNetworkGetRSSI"];
@@ -160,6 +175,8 @@ static NSInteger liush_wifistrongest_pct(NSInteger rssi) {
         }
     }
     if (_manager) {
+        // 扫描回调走系统 runloop 投递，必须先把 manager 挂上去，否则 ScanAsync 永远不回调。
+        if (_schedule) _schedule(_manager, CFRunLoopGetMain(), kCFRunLoopCommonModes);
         if (_getDevice) _device = _getDevice(_manager);
         if (!_device && _copyDevices) {
             NSArray *devices = CFBridgingRelease(_copyDevices(_manager));
@@ -183,7 +200,10 @@ static NSInteger liush_wifistrongest_pct(NSInteger rssi) {
 }
 
 - (BOOL)liush_wifistrongest_canScan {
-    return _manager != NULL && _scan && _copyNetworks && _networkSSID && _networkRSSI;
+    BOOL hasScan = (_scanAsync != NULL) || (_scan != NULL);
+    BOOL hasResults = (_copyAvailable != NULL) || (_copyNetworks != NULL);
+    return _manager != NULL && _device != NULL && hasScan && hasResults
+        && _networkSSID != NULL && _networkRSSI != NULL;
 }
 
 - (NSString *)liush_wifistrongest_diagnostic {
@@ -309,13 +329,55 @@ static NSInteger liush_wifistrongest_pct(NSInteger rssi) {
     };
 }
 
+// 新系统的扫描入口：WiFiDeviceClientScanAsync(device, options, callback, token)。
+// 回调可能由系统内部线程或挂好的 runloop 投递，这里用信号量等它，最多 10s。
+static void liush_wifistrongest_scanCallback(LiushWiFiStrongestDeviceRef device, CFArrayRef results,
+                                             CFErrorRef error, void *token) {
+    dispatch_semaphore_t sem = (__bridge dispatch_semaphore_t)token;
+    if (sem) dispatch_semaphore_signal(sem);
+}
+
+- (BOOL)liush_wifistrongest_triggerScan {
+    if (_scanAsync) {
+        dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+        _scanAsync(_device, (__bridge CFDictionaryRef)@{},
+                   liush_wifistrongest_scanCallback, (__bridge void *)sem);
+        long waited = dispatch_semaphore_wait(sem,
+            dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)));
+        if (waited != 0) {
+            [LiushWiFiStrongestLog liush_wifistrongest_log:@"主动扫描等回调超时(10s)，改用系统缓存结果"];
+            return NO;
+        }
+        return YES;
+    }
+    if (_scan) {
+        _scan(_manager);
+        return YES;
+    }
+    return NO;
+}
+
+// 结果读取优先级：设备端缓存 > 老接口。两者都空才算真的空。
+- (NSArray *)liush_wifistrongest_resultNetworks {
+    if (_copyAvailable) {
+        NSArray *networks = CFBridgingRelease(_copyAvailable(_device));
+        if ([networks isKindOfClass:[NSArray class]] && networks.count > 0) return networks;
+    }
+    if (_copyNetworks) {
+        NSArray *networks = CFBridgingRelease(_copyNetworks(_manager));
+        if ([networks isKindOfClass:[NSArray class]]) return networks;
+    }
+    return @[];
+}
+
 - (NSArray<NSDictionary *> *)liush_wifistrongest_scanNetworks {
     _scanned = nil;
     if (![self liush_wifistrongest_canScan]) return @[];
-    _scan(_manager);
-    NSArray *networks = CFBridgingRelease(_copyNetworks(_manager));
+    BOOL triggered = [self liush_wifistrongest_triggerScan];
+    NSArray *networks = [self liush_wifistrongest_resultNetworks];
     if (![networks isKindOfClass:[NSArray class]] || networks.count == 0) {
-        [LiushWiFiStrongestLog liush_wifistrongest_verbose:@"扫描结果为空"];
+        [LiushWiFiStrongestLog liush_wifistrongest_log:
+            triggered ? @"扫描已触发但结果为空" : @"无法触发扫描且缓存为空"];
         return @[];
     }
     _scanned = networks;
