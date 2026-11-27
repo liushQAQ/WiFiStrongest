@@ -7,7 +7,7 @@
 #import <objc/message.h>
 
 // C 回调在本类实现之前就要引用自检方法，这里前置声明。
-@interface LiushWiFiStrongestEngine (LiushSelfCheck)
+@interface LiushWiFiStrongestEngine (LiushWiFiStrongestSelfCheck)
 - (void)liush_wifistrongest_selfCheck;
 @end
 
