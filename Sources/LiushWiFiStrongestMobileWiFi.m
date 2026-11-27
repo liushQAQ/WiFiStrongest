@@ -330,10 +330,22 @@ static NSInteger liush_wifistrongest_pct(NSInteger rssi) {
 }
 
 // 新系统的扫描入口：WiFiDeviceClientScanAsync(device, options, callback, token)。
-// 回调可能由系统内部线程或挂好的 runloop 投递，这里用信号量等它，最多 10s。
+// 关键：回调的第二个参数才是现场扫描结果（附近真实存在的网络）。
+// CopyAvailableNetworks 拿到的是「记忆过的已知网络」缓存，不是现场结果——
+// 实测 290 个全是连过的 SSID，周围不存在的也在里面，只能做兜底，不能当扫描结果。
+static NSMutableArray *liush_wifistrongest_liveResults;
 static void liush_wifistrongest_scanCallback(LiushWiFiStrongestDeviceRef device, CFArrayRef results,
                                              CFErrorRef error, void *token) {
     dispatch_semaphore_t sem = (__bridge dispatch_semaphore_t)token;
+    NSMutableArray *live = [NSMutableArray array];
+    if (results) {
+        // CFBridgingRelease：回调给的数组遵循 Get 规则，直接移交 ARC 持有。
+        NSArray *bridged = CFBridgingRelease(results);
+        if ([bridged isKindOfClass:[NSArray class]]) [live addObjectsFromArray:bridged];
+    }
+    @synchronized([LiushWiFiStrongestMobileWiFi class]) {
+        liush_wifistrongest_liveResults = live;
+    }
     if (sem) dispatch_semaphore_signal(sem);
 }
 
@@ -345,7 +357,7 @@ static void liush_wifistrongest_scanCallback(LiushWiFiStrongestDeviceRef device,
         long waited = dispatch_semaphore_wait(sem,
             dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)));
         if (waited != 0) {
-            [LiushWiFiStrongestLog liush_wifistrongest_log:@"主动扫描等回调超时(10s)，改用系统缓存结果"];
+            [LiushWiFiStrongestLog liush_wifistrongest_log:@"主动扫描等回调超时(10s)，改用已知网络缓存"];
             return NO;
         }
         return YES;
@@ -357,11 +369,19 @@ static void liush_wifistrongest_scanCallback(LiushWiFiStrongestDeviceRef device,
     return NO;
 }
 
-// 结果读取优先级：设备端缓存 > 老接口。两者都空才算真的空。
+// 结果来源：现场回调结果优先；只有回调为空/超时才退回已知网络缓存，并在日志注明。
 - (NSArray *)liush_wifistrongest_resultNetworks {
+    @synchronized([LiushWiFiStrongestMobileWiFi class]) {
+        if (liush_wifistrongest_liveResults.count > 0) return liush_wifistrongest_liveResults;
+    }
     if (_copyAvailable) {
         NSArray *networks = CFBridgingRelease(_copyAvailable(_device));
-        if ([networks isKindOfClass:[NSArray class]] && networks.count > 0) return networks;
+        if ([networks isKindOfClass:[NSArray class]] && networks.count > 0) {
+            [LiushWiFiStrongestLog liush_wifistrongest_log:
+                @"现场结果为空，改用已知网络缓存 %lu 个（可能含不在附近的网络）",
+                (unsigned long)networks.count];
+            return networks;
+        }
     }
     if (_copyNetworks) {
         NSArray *networks = CFBridgingRelease(_copyNetworks(_manager));
