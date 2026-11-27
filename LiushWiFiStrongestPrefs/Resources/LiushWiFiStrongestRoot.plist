@@ -92,13 +92,27 @@
 		</dict>
 		<dict>
 			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>打开后完全按上面自定义的扫描间隔执行：信号再好也到点就扫，自动省电退避（间隔自动拉长 2~3 倍）也关闭。更耗电，但节奏完全听你的。</string>
+			<key>key</key>
+			<string>strictInterval</string>
+			<key>label</key>
+			<string>严格按间隔扫描</string>
+		</dict>
+		<dict>
+			<key>cell</key>
 			<string>PSEditTextCell</string>
 			<key>default</key>
 			<integer>90</integer>
 			<key>defaults</key>
 			<string>com.liush.wifistrongest</string>
 			<key>footerText</key>
-			<string>两次扫描之间至少隔这么久，默认 20 秒，最小 5 秒。注意：到点后只有当前信号低于「区间阈值」才会真扫，信号好就继续等。</string>
+			<string>两次扫描之间至少隔这么久，自定义填多少就隔多少，最小 5 秒，默认 90 秒。注意：到点后只有当前信号低于「强制扫描阈值」才会真扫；想让到点必扫、完全按你填的时间执行，把下面的「严格按间隔扫描」打开。</string>
 			<key>key</key>
 			<string>scanInterval</string>
 			<key>keyboard</key>
