@@ -86,7 +86,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>逻辑很简单：当前 WiFi 信号跌破「扫描触发阈值」才去扫描（平时完全不扫，不耗电）；扫到了只有信号高于「切换目标阈值」、并且确实比现在更强，才切过去。dBm 是负数，越接近 0 越强（-50 很强，-85 很弱）。</string>
+			<string>逻辑很简单：当前 WiFi 信号跌破自己频段的「触发阈值」才去扫描（平时完全不扫，不耗电）；扫到的高于「切换目标阈值」的网络全部参与比较，符合条件的 5G 优先、2.4G 次之，按分数选最强的立刻切。dBm 是负数，越接近 0 越强（-50 很强，-85 很弱）。</string>
 			<key>label</key>
 			<string>扫描与阈值</string>
 		</dict>
@@ -114,13 +114,29 @@
 			<key>defaults</key>
 			<string>com.liush.wifistrongest</string>
 			<key>footerText</key>
-			<string>核心开关：当前连接的 WiFi 低于这个值才扫描，默认 -75（约 2 格）。高于它完全不扫描、不耗电。想更早换网调到 -70，想更省电调到 -80。</string>
+			<string>核心开关：当前连接的是 2.4G WiFi，跌破这个值才扫描，默认 -75（约 2 格）。高于它完全不扫描、不耗电。5G 用下面单独的「5G 触发阈值」。</string>
 			<key>key</key>
 			<string>forceThreshold</string>
 			<key>keyboard</key>
 			<string>NumbersAndPunctuation</string>
 			<key>label</key>
 			<string>扫描触发阈值（dBm）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string>-72</string>
+			<key>defaults</key>
+			<string>com.liush.wifistrongest</string>
+			<key>footerText</key>
+			<string>当前连接的是 5G WiFi 时用这个阈值，默认 -72（5G 衰减快，更早触发切走）。5G 信号读数抖得凶，会等连续两针（约 10 秒）都低于它才真扫，防误扫。</string>
+			<key>key</key>
+			<string>triggerThreshold5G</string>
+			<key>keyboard</key>
+			<string>NumbersAndPunctuation</string>
+			<key>label</key>
+			<string>5G 触发阈值（dBm）</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -220,7 +236,7 @@
 			<key>defaults</key>
 			<string>com.liush.wifistrongest</string>
 			<key>footerText</key>
-			<string>只在你当前完全没连 WiFi 时才起作用（刚开机、刚关飞行模式、被踢下线）：主动去连扫描到的最强网络。关闭时插件只做"已经有网 → 换成更好的网"，不会主动帮你从无到有连上。</string>
+			<string>只在你当前完全没连 WiFi 时才起作用（刚开机、刚关飞行模式、被踢下线）：主动去连扫描到的最强网络。为省电，一轮解锁最多尝试 3 次，3 次没连上就暂停，解锁后重置再来；关闭时插件只做"已经有网 → 换成更好的网"。</string>
 			<key>key</key>
 			<string>autoJoinWhenDisconnected</string>
 			<key>label</key>
