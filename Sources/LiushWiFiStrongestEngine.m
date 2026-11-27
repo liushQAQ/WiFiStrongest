@@ -334,7 +334,7 @@ static void liush_wifistrongest_selfCheckCallback(CFNotificationCenterRef center
     if (forced || networks.count != previousCount) {
         [LiushWiFiStrongestLog liush_wifistrongest_log:@"扫描：%lu 个网络 | 当前 %@ %lddBm（触发阈值 %ld，目标阈值 %ld）",
             (unsigned long)networks.count, (currentSSID ?: @"未连接"),
-            (long)currentRSSI, (long)triggerThreshold, (long)targetThreshold);
+            (long)currentRSSI, (long)triggerThreshold, (long)targetThreshold];
     }
     liush_wifistrongest_writeSnapshot([wifi liush_wifistrongest_snapshot]);
 
